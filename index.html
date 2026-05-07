@@ -440,26 +440,27 @@ async function showAdminTab(tab) {
       </div>`;
 
   } else if (tab === 'credit') {
-    const { data: credits } = await db.from('credit_ledger').select('*, customers(name, phone), orders(total_amount)').order('created_at', { ascending: false });
+    const { data: credits } = await db.from('credit_summary').select('*');
     content.innerHTML = `
       <h2 class="text-xl font-bold mb-4">Credit Ledger</h2>
       ${(credits || []).length === 0 ? '<div class="text-gray-400">No credit orders yet</div>' : ''}
       <div class="space-y-3">
         ${(credits || []).map(c => `
           <div class="bg-white rounded-xl shadow p-4">
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center">
               <div>
-                <div class="font-bold">${c.customers?.name || 'Unknown'}</div>
-                <div class="text-sm text-gray-500">${c.customers?.phone || ''}</div>
-                <div class="text-xs text-gray-400">${new Date(c.created_at).toLocaleString()}</div>
+                <div class="font-bold">${c.name}</div>
+                <div class="text-sm text-gray-500">${c.phone}</div>
+                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
               </div>
               <div class="text-right">
-                <div class="font-bold text-red-500">₹${c.amount}</div>
-                <div class="text-xs text-gray-400">${c.type}</div>
+                <div class="text-xs text-gray-400">Total Owed</div>
+                <div class="font-bold text-red-500 text-lg">₹${c.total_owed}</div>
               </div>
             </div>
           </div>`).join('')}
       </div>`;
+  }
   }
 }
 
