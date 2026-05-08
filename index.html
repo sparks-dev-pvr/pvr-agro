@@ -404,7 +404,7 @@ async function showAdminTab(tab) {
                 <div class="text-xs text-blue-600">${o.payment_method}</div>
                 <select onchange="updateOrderStatus('${o.id}', this.value)"
                   class="text-xs border rounded px-1 py-0.5 mt-1">
-                  ${['pending','confirmed','processing','delivered','cancelled'].map(s =>
+                  $[['pending','confirmed','delivering','delivered','cancelled'].map(s =>
                     `<option value="${s}" ${o.order_status === s ? 'selected' : ''}>${s}</option>`
                   ).join('')}
                 </select>
