@@ -113,7 +113,9 @@ function renderHome() {
   <input id="searchInput" type="text" placeholder="Search products..."
     class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500" />
   <button onclick="state.search=document.getElementById('searchInput').value; render();"
-    class="bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Search</button>
+  class="bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Search</button>
+<button onclick="state.search=''; state.products=[]; render();"
+  class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
 </div>
     <div class="flex gap-2 overflow-x-auto pb-2 mb-6">
       ${categories.map(c => `
