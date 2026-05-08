@@ -840,10 +840,22 @@ async function toggleCreditDetail(customerId) {
   panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
 
   // Load orders for this customer
-  const { data: orders } = await db.from('orders')
+  const { data: ledger } = await db.from('credit_ledger')
     .select('*')
     .eq('customer_id', customerId)
     .order('created_at', { ascending: false });
+
+  const orderIds = (ledger || []).filter(e => e.order_id).map(e => e.order_id);
+  let orderItemsMap = {};
+  if (orderIds.length > 0) {
+    const { data: allItems } = await db.from('order_items')
+      .select('*, products(name), product_variants(bag_size)')
+      .in('order_id', orderIds);
+    (allItems || []).forEach(item => {
+      if (!orderItemsMap[item.order_id]) orderItemsMap[item.order_id] = [];
+      orderItemsMap[item.order_id].push(`${item.products?.name} ${item.product_variants?.bag_size} x${item.quantity}`);
+    });
+  }
 
   // Load full ledger for this customer
   const { data: ledger } = await db.from('credit_ledger')
