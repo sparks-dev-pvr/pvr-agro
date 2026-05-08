@@ -185,10 +185,15 @@ function renderProduct() {
               <div class="text-green-700 font-bold">Price: ₹${v.price}</div>
               <div class="text-xs text-gray-400">Stock: ${v.stock_quantity}</div>
             </div>
-            <button onclick="addToCart('${product.id}','${v.id}','${product.name}','${v.bag_size}',${v.price})"
-              class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
-              Add to Cart
-            </button>
+            <div class="flex items-center gap-2">
+  <button onclick="this.nextElementSibling.stepDown()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">-</button>
+  <input type="number" id="qty_${v.id}" value="1" min="1" class="w-12 text-center border rounded-lg py-1 text-sm" />
+  <button onclick="this.previousElementSibling.stepUp()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">+</button>
+</div>
+<button onclick="addToCartQty('${product.id}','${v.id}','${product.name}','${v.bag_size}',${v.price})"
+  class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
+  Add to Cart
+</button>
           </div>`).join('')}
       </div>
     </div>
@@ -511,7 +516,18 @@ function addToCart(productId, variantId, name, size, price) {
   alert(`${name} (${size}) added to cart! 🛒`);
   render();
 }
-
+function addToCartQty(productId, variantId, name, size, price) {
+  const qty = parseInt(document.getElementById('qty_' + variantId)?.value) || 1;
+  const existing = state.cart.find(i => i.variantId === variantId);
+  if (existing) {
+    existing.qty += qty;
+  } else {
+    state.cart.push({ productId, variantId, name, size, price, qty });
+  }
+  saveCart();
+  alert(`${name} (${size}) x${qty} added to cart! 🛒`);
+  render();
+}
 function updateQty(index, delta) {
   state.cart[index].qty += delta;
   if (state.cart[index].qty <= 0) state.cart.splice(index, 1);
@@ -636,7 +652,15 @@ function adminLogout() {
       <input id="ep_company" value="${product.company_name || ''}" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
       <input id="ep_chemical" value="${product.chemical_name || ''}" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
       <input id="ep_desc" value="${product.description || ''}" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
+      <div class="font-semibold text-sm mb-1 mt-2">Update Stock & Price</div>
+${(product.product_variants || []).map(v => `
+  <div class="flex gap-2 mb-2 items-center">
+    <span class="text-sm w-16">${v.bag_size}</span>
+    <input id="ep_mrp_${v.id}" type="number" value="${v.mrp || 0}" placeholder="MRP" class="border rounded px-2 py-1 text-sm w-24" />
+    <input id="ep_price_${v.id}" type="number" value="${v.price}" placeholder="Price" class="border rounded px-2 py-1 text-sm w-24" />
+    <input id="ep_stock_${v.id}" type="number" value="${v.stock_quantity}" placeholder="Stock" class="border rounded px-2 py-1 text-sm w-20" />
+  </div>`).join('')}
+  <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
     </div>`;
 }
 
@@ -648,6 +672,19 @@ async function saveEditProduct(productId) {
   await db.from('products').update({ 
     name, company_name: company, chemical_name: chemical, description: desc 
   }).eq('id', productId);
+  const product = state.adminProducts?.find(p => p.id === productId);
+if (product?.product_variants) {
+  for (const v of product.product_variants) {
+    const mrp = document.getElementById('ep_mrp_' + v.id)?.value;
+    const price = document.getElementById('ep_price_' + v.id)?.value;
+    const stock = document.getElementById('ep_stock_' + v.id)?.value;
+    if (price) await db.from('product_variants').update({ 
+      mrp: parseFloat(mrp), 
+      price: parseFloat(price), 
+      stock_quantity: parseInt(stock) 
+    }).eq('id', v.id);
+  }
+}
   alert('Product updated! 🌿');
   showAdminTab('products');
 }
