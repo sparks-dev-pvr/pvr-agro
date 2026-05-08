@@ -879,8 +879,7 @@ async function toggleCreditDetail(customerId) {
               </div>
               <div class="text-gray-500">${entry.note || '-'}</div>
               <div class="text-gray-400">${new Date(entry.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
-              ${entry.order_id ? `<div class="text-gray-400">Order: #${entry.order_id.substring(0,8).toUpperCase()}</div>` : '<div class="text-gray-400 italic">Manual entry</div>'}
-            </div>
+              ${entry.order_id ? `<div class="text-gray-400">Order: #${entry.order_id.substring(0,8).toUpperCase()}</div><div class="text-gray-400 italic" id="items_${entry.id}">Loading items...</div>` : '<div class="text-gray-400 italic">Manual entry</div>'}
             <div class="text-right ml-2">
               <div class="font-bold text-sm ${entry.type === 'debit' ? 'text-red-600' : 'text-green-600'}">
                 ${entry.type === 'debit' ? '+' : '-'}₹${entry.amount}
