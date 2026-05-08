@@ -485,24 +485,30 @@ async function showAdminTab(tab) {
       ${(credits || []).length === 0 ? '<div class="text-gray-400">No credit orders yet</div>' : ''}
       <div class="space-y-3">
         ${(credits || []).map(c => `
-          <div class="bg-white rounded-xl shadow p-4">
-  <div class="flex justify-between items-center">
-    <div>
-      <div class="font-bold">${c.name}</div>
-      <div class="text-sm text-gray-500">${c.phone}</div>
-      <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
-    </div>
-    <div class="text-right">
-      <div class="text-xs text-gray-400">Total Owed: ₹${c.total_owed}</div>
-      <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
-      <div class="font-bold text-red-500 text-lg">Balance: ₹${c.balance}</div>
-      <button onclick="recordPayment('${c.customer_id}', '${c.name}', ${c.balance})"
-        class="mt-1 bg-green-700 text-white text-xs px-3 py-1 rounded-lg">
-        💰 Record Payment
-      </button>
-    </div>
-  </div>
-</div>  
+          <div class="bg-white rounded-xl shadow p-4" id="credit_card_${c.customer_id}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold">${c.name}</div>
+                <div class="text-sm text-gray-500">${c.phone}</div>
+                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-gray-400">Total Owed: ₹${c.total_owed}</div>
+                <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
+                <div class="font-bold text-lg ${c.balance > 0 ? 'text-red-500' : 'text-green-600'}">Balance: ₹${c.balance}</div>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-3 flex-wrap">
+              <button onclick="toggleCreditDetail('${c.customer_id}')"
+                class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 View Details</button>
+              <button onclick="recordPayment('${c.customer_id}', '${c.name}', ${c.balance})"
+                class="bg-green-700 text-white text-xs px-3 py-1 rounded-lg">💰 Record Payment</button>
+              <button onclick="addManualEntry('${c.customer_id}', '${c.name}', 'debit')"
+                class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">➕ Add Debit</button>
+              <button onclick="addManualEntry('${c.customer_id}', '${c.name}', 'credit')"
+                class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-lg">➕ Add Credit</button>
+            </div>
+            <div id="credit_detail_${c.customer_id}" class="hidden mt-4"></div>
           </div>`).join('')}
       </div>`;
   }
@@ -510,11 +516,12 @@ async function showAdminTab(tab) {
 async function recordPayment(customerId, customerName, balance) {
   const amount = prompt(`Record payment for ${customerName}\nCurrent balance: ₹${balance}\n\nEnter amount paid:`);
   if (!amount || isNaN(amount)) return;
+  const note = prompt('Add a note (optional, e.g. "Cash payment", "UPI ref #123"):') || 'Payment received';
   await db.from('credit_ledger').insert({
     customer_id: customerId,
     amount: parseFloat(amount),
     type: 'credit',
-    note: 'Payment received',
+    note: note,
   });
   alert(`Payment of ₹${amount} recorded! ✅`);
   showAdminTab('credit');
@@ -821,7 +828,109 @@ const { data: product } = await db.from('products').insert({ name, category, des
   alert('Product added successfully! 🌿');
   showAdminTab('products');
 }
+async function toggleCreditDetail(customerId) {
+  const panel = document.getElementById('credit_detail_' + customerId);
+  if (!panel) return;
+  if (!panel.classList.contains('hidden')) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  panel.classList.remove('hidden');
+  panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
 
+  // Load orders for this customer
+  const { data: orders } = await db.from('orders')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+
+  // Load full ledger for this customer
+  const { data: ledger } = await db.from('credit_ledger')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+
+  panel.innerHTML = `
+    <div class="border-t pt-3">
+      <div class="font-semibold text-sm text-gray-700 mb-2">📦 Orders</div>
+      <div class="space-y-2 mb-4">
+        ${(orders || []).length === 0 ? '<div class="text-xs text-gray-400">No orders found</div>' : ''}
+        ${(orders || []).map(o => `
+          <div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 text-xs">
+            <div>
+              <div class="font-semibold">#${o.id.substring(0,8).toUpperCase()}</div>
+              <div class="text-gray-400">${new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
+              <div class="text-gray-500">${o.payment_method} · ${o.order_status}</div>
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-gray-800">₹${o.total_amount}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div class="font-semibold text-sm text-gray-700 mb-2">📒 Full Ledger</div>
+      <div class="space-y-2">
+        ${(ledger || []).length === 0 ? '<div class="text-xs text-gray-400">No ledger entries</div>' : ''}
+        ${(ledger || []).map(entry => `
+          <div class="flex justify-between items-center rounded-lg px-3 py-2 text-xs ${entry.type === 'debit' ? 'bg-red-50' : 'bg-green-50'}">
+            <div class="flex-1">
+              <div class="font-semibold ${entry.type === 'debit' ? 'text-red-700' : 'text-green-700'}">
+                ${entry.type === 'debit' ? '▲ Debit' : '▼ Credit'}
+              </div>
+              <div class="text-gray-500">${entry.note || '-'}</div>
+              <div class="text-gray-400">${new Date(entry.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
+              ${entry.order_id ? `<div class="text-gray-400">Order: #${entry.order_id.substring(0,8).toUpperCase()}</div>` : '<div class="text-gray-400 italic">Manual entry</div>'}
+            </div>
+            <div class="text-right ml-2">
+              <div class="font-bold text-sm ${entry.type === 'debit' ? 'text-red-600' : 'text-green-600'}">
+                ${entry.type === 'debit' ? '+' : '-'}₹${entry.amount}
+              </div>
+              <div class="flex gap-1 mt-1 justify-end">
+                <button onclick="editLedgerEntry('${entry.id}', '${customerId}', ${entry.amount}, \`${(entry.note || '').replace(/`/g, "'")}\`)"
+                  class="text-blue-500 underline">Edit</button>
+                <button onclick="deleteLedgerEntry('${entry.id}', '${customerId}')"
+                  class="text-red-400 underline">Del</button>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+async function addManualEntry(customerId, customerName, type) {
+  const label = type === 'debit' ? 'debit (amount customer owes)' : 'credit (amount customer paid)';
+  const amount = prompt(`Add manual ${label} for ${customerName}\n\nEnter amount:`);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt(`Note for this entry (e.g. "Old dues from April", "Cash received"):`) || (type === 'debit' ? 'Manual debit entry' : 'Manual credit entry');
+  await db.from('credit_ledger').insert({
+    customer_id: customerId,
+    amount: parseFloat(amount),
+    type: type,
+    note: note,
+  });
+  alert(`Manual ${type} of ₹${amount} added! ✅`);
+  showAdminTab('credit');
+}
+
+async function editLedgerEntry(entryId, customerId, currentAmount, currentNote) {
+  const amount = prompt(`Edit amount:\nCurrent: ₹${currentAmount}`, currentAmount);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt(`Edit note:\nCurrent: ${currentNote}`, currentNote);
+  if (note === null) return;
+  await db.from('credit_ledger').update({
+    amount: parseFloat(amount),
+    note: note,
+  }).eq('id', entryId);
+  alert('Entry updated! ✅');
+  showAdminTab('credit');
+}
+
+async function deleteLedgerEntry(entryId, customerId) {
+  if (!confirm('Delete this ledger entry? This cannot be undone.')) return;
+  await db.from('credit_ledger').delete().eq('id', entryId);
+  alert('Entry deleted!');
+  showAdminTab('credit');
+}
 function navigate(page) {
   state.page = page;
   render();
