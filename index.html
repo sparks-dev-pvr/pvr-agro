@@ -67,7 +67,7 @@ function render() {
     app.innerHTML = renderProduct();
   } else {
     app.innerHTML = renderHome();
-    loadProducts();
+    if(state.products.length === 0) loadProducts();
   }
   attachEvents();
 }
