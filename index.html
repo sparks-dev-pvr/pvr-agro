@@ -535,6 +535,15 @@ function addToCart(productId, variantId, name, size, price) {
 }
 function addToCartQty(productId, variantId, name, size, price) {
   const qty = parseInt(document.getElementById('qty_' + variantId)?.value) || 1;
+  const variant = state.products.flatMap(p => p.variants || []).find(v => v.id === variantId);
+  if (variant && variant.stock_quantity === 0) {
+    alert(`Sorry! ${name} (${size}) is out of stock!`);
+    return;
+  }
+  if (variant && variant.stock_quantity < qty) {
+    alert(`Sorry! Only ${variant.stock_quantity} units available for ${name} (${size})`);
+    return;
+  }
   const existing = state.cart.find(i => i.variantId === variantId);
   if (existing) {
     existing.qty += qty;
