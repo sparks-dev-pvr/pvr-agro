@@ -101,8 +101,8 @@ function renderHome() {
   const filtered = state.products.filter(p => {
     const matchCat = state.category === 'all' || p.category === state.category;
     const matchSearch = p.name.toLowerCase().includes(state.search.toLowerCase()) ||
-  (p.chemical_name && p.chemical_name.toLowerCase().includes(state.search.toLowerCase())) ||
-  (p.company_name && p.company_name.toLowerCase().includes(state.search.toLowerCase()));
+      (p.chemical_name && p.chemical_name.toLowerCase().includes(state.search.toLowerCase())) ||
+      (p.company_name && p.company_name.toLowerCase().includes(state.search.toLowerCase()));
     return matchCat && matchSearch;
   });
 
@@ -110,13 +110,13 @@ function renderHome() {
   ${renderNav()}
   <div class="max-w-5xl mx-auto px-4 py-6">
     <div class="flex gap-2 mb-4">
-  <input id="searchInput" type="text" placeholder="Search products..."
-    class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500" />
-  <button onclick="state.search=document.getElementById('searchInput').value; render();"
-  class="bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Search</button>
-<button onclick="state.search=''; state.products=[]; render();"
-  class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
-</div>
+      <input id="searchInput" type="text" placeholder="Search products..."
+        class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500" />
+      <button onclick="state.search=document.getElementById('searchInput').value; render();"
+        class="bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Search</button>
+      <button onclick="state.search=''; state.products=[]; render();"
+        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
+    </div>
     <div class="flex gap-2 overflow-x-auto pb-2 mb-6">
       ${categories.map(c => `
         <button onclick="state.category='${c}'; render();"
@@ -135,7 +135,7 @@ function renderHome() {
           </div>
           <div class="font-semibold text-gray-800 text-sm">${p.name}</div>
           <div class="text-xs text-gray-500 mb-1">${p.company_name ? p.company_name + ' · ' : ''}${p.category}</div>
-${p.chemical_name ? `<div class="text-xs text-blue-400">${p.chemical_name}</div>` : ''}
+          ${p.chemical_name ? `<div class="text-xs text-blue-400">${p.chemical_name}</div>` : ''}
           ${p.variants && p.variants.length > 0 ? `
             <div class="text-xs text-gray-400">MRP: ₹${p.variants[0].mrp || '-'}</div>
             <div class="text-green-700 font-bold text-sm">₹${p.variants[0].price}</div>
@@ -186,14 +186,14 @@ function renderProduct() {
               <div class="text-xs text-gray-400">Stock: ${v.stock_quantity}</div>
             </div>
             <div class="flex items-center gap-2">
-  <button onclick="this.nextElementSibling.stepDown()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">-</button>
-  <input type="number" id="qty_${v.id}" value="1" min="1" class="w-12 text-center border rounded-lg py-1 text-sm" />
-  <button onclick="this.previousElementSibling.stepUp()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">+</button>
-</div>
-<button onclick="addToCartQty('${product.id}','${v.id}','${product.name}','${v.bag_size}',${v.price})"
-  class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
-  Add to Cart
-</button>
+              <button onclick="this.nextElementSibling.stepDown()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">-</button>
+              <input type="number" id="qty_${v.id}" value="1" min="1" class="w-12 text-center border rounded-lg py-1 text-sm" />
+              <button onclick="this.previousElementSibling.stepUp()" class="w-8 h-8 bg-gray-100 rounded-full font-bold text-lg">+</button>
+            </div>
+            <button onclick="addToCartQty('${product.id}','${v.id}','${product.name}','${v.bag_size}',${v.price})"
+              class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-800">
+              Add to Cart
+            </button>
           </div>`).join('')}
       </div>
     </div>
@@ -372,30 +372,7 @@ async function loadProducts() {
   state.loading = false;
   render();
 }
-function renderProducts() {
-  const filtered = state.products.filter(p => {
-    const matchCat = state.category === 'all' || p.category === state.category;
-    const matchSearch = p.name.toLowerCase().includes(state.search.toLowerCase()) ||
-      (p.chemical_name && p.chemical_name.toLowerCase().includes(state.search.toLowerCase())) ||
-      (p.company_name && p.company_name.toLowerCase().includes(state.search.toLowerCase()));
-    return matchCat && matchSearch;
-  });
-  const grid = document.getElementById('product_grid');
-  if (grid) grid.innerHTML = filtered.map(p => `
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition"
-      onclick="state.selectedProduct='${p.id}'; state.page='product'; render();">
-      <div class="w-full h-28 bg-green-50 rounded-lg flex items-center justify-center mb-2 text-4xl">
-        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover rounded-lg" />` : getCategoryEmoji(p.category)}
-      </div>
-      <div class="font-semibold text-gray-800 text-sm">${p.name}</div>
-      <div class="text-xs text-gray-500 mb-1">${p.company_name ? p.company_name + ' · ' : ''}${p.category}</div>
-      ${p.chemical_name ? `<div class="text-xs text-blue-400">${p.chemical_name}</div>` : ''}
-      ${p.variants && p.variants.length > 0 ? `
-        <div class="text-xs text-gray-400">MRP: ₹${p.variants[0].mrp || '-'}</div>
-        <div class="text-green-700 font-bold text-sm">₹${p.variants[0].price}</div>
-      ` : '<div class="text-xs text-gray-400">No variants</div>'}
-    </div>`).join('');
-}
+
 async function loadAdminData() {
   showAdminTab('orders');
 }
@@ -461,10 +438,10 @@ async function showAdminTab(tab) {
                 <div class="text-sm text-gray-500">${p.category}</div>
               </div>
               <div class="flex items-center gap-2">
-  <div class="text-xs text-gray-400">${(p.product_variants || []).length} variants</div>
-  <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600 mr-2">✏️ Edit</button>
-<button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
-</div>
+                <div class="text-xs text-gray-400">${(p.product_variants || []).length} variants</div>
+                <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600 mr-2">✏️ Edit</button>
+                <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
+              </div>
             </div>
             <div class="mt-2 space-y-1">
               ${(p.product_variants || []).map(v => `
@@ -488,19 +465,21 @@ async function showAdminTab(tab) {
           <div class="bg-white rounded-xl shadow p-4" id="credit_card_${c.customer_id}">
             <div class="flex justify-between items-start">
               <div>
-                <div class="font-bold">${c.name}</div>
+                <div class="font-bold text-lg">${c.name}</div>
                 <div class="text-sm text-gray-500">${c.phone}</div>
-                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
+                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString('en-IN')}</div>
               </div>
               <div class="text-right">
-                <div class="text-xs text-gray-400">Total Owed: ₹${c.total_owed}</div>
+                <div class="text-xs text-gray-400">Total Billed: ₹${c.total_owed}</div>
                 <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
-                <div class="font-bold text-lg ${c.balance > 0 ? 'text-red-500' : 'text-green-600'}">Balance: ₹${c.balance}</div>
+                <div class="font-bold text-lg ${c.balance > 0 ? 'text-red-500' : 'text-green-600'}">
+                  ${c.balance > 0 ? 'Outstanding: ₹' + c.balance : 'Settled ✅'}
+                </div>
               </div>
             </div>
             <div class="flex gap-2 mt-3 flex-wrap">
               <button onclick="toggleCreditDetail('${c.customer_id}')"
-                class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 View Details</button>
+                class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 Party Statement</button>
               <button onclick="recordPayment('${c.customer_id}', '${c.name}', ${c.balance})"
                 class="bg-green-700 text-white text-xs px-3 py-1 rounded-lg">💰 Record Payment</button>
               <button onclick="addManualEntry('${c.customer_id}', '${c.name}', 'debit')"
@@ -513,6 +492,124 @@ async function showAdminTab(tab) {
       </div>`;
   }
 }
+
+// ============================================
+// PARTY STATEMENT
+// ============================================
+async function toggleCreditDetail(customerId) {
+  const panel = document.getElementById('credit_detail_' + customerId);
+  if (!panel) return;
+  if (!panel.classList.contains('hidden')) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  panel.classList.remove('hidden');
+  panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading statement...</div>';
+
+  const { data: ledger } = await db.from('credit_ledger')
+    .select('*')
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: true });
+
+  const orderIds = (ledger || []).filter(e => e.order_id).map(e => e.order_id);
+  let orderItemsMap = {};
+  if (orderIds.length > 0) {
+    const { data: allItems } = await db.from('order_items')
+      .select('*, products(name), product_variants(bag_size)')
+      .in('order_id', orderIds);
+    (allItems || []).forEach(item => {
+      if (!orderItemsMap[item.order_id]) orderItemsMap[item.order_id] = [];
+      orderItemsMap[item.order_id].push(`${item.products?.name} ${item.product_variants?.bag_size} x${item.quantity}`);
+    });
+  }
+
+  let runningBalance = 0;
+  const rows = (ledger || []).map(entry => {
+    if (entry.type === 'debit') {
+      runningBalance += entry.amount;
+    } else {
+      runningBalance -= entry.amount;
+    }
+    const date = new Date(entry.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const isDebit = entry.type === 'debit';
+    const ref = entry.order_id ? '#' + entry.order_id.substring(0, 8).toUpperCase() : 'Manual';
+    const description = entry.order_id
+      ? (orderItemsMap[entry.order_id] || []).join(', ') || 'Sale'
+      : (entry.note || 'Manual entry');
+    const safeNote = (entry.note || '').replace(/'/g, '');
+    return { date, isDebit, ref, description, amount: entry.amount, runningBalance, entryId: entry.id, safeNote };
+  });
+
+  const totalDebit = rows.filter(r => r.isDebit).reduce((s, r) => s + r.amount, 0);
+  const totalCredit = rows.filter(r => !r.isDebit).reduce((s, r) => s + r.amount, 0);
+  const closingBalance = rows.length > 0 ? rows[rows.length - 1].runningBalance : 0;
+
+  panel.innerHTML = `
+    <div class="border-t pt-4">
+      <div class="flex justify-between items-center mb-3">
+        <div class="font-bold text-gray-700">📄 Party Statement</div>
+        <div class="text-xs text-gray-400">${rows.length} entries</div>
+      </div>
+      <div class="overflow-x-auto rounded-xl border border-gray-200">
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="bg-green-700 text-white">
+              <th class="px-2 py-2 text-left">Date</th>
+              <th class="px-2 py-2 text-left">Description</th>
+              <th class="px-2 py-2 text-left">Ref</th>
+              <th class="px-2 py-2 text-right text-red-200">Debit (₹)</th>
+              <th class="px-2 py-2 text-right text-green-200">Credit (₹)</th>
+              <th class="px-2 py-2 text-right">Balance (₹)</th>
+              <th class="px-2 py-2 text-center">Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.length === 0 ? `
+              <tr><td colspan="7" class="text-center py-6 text-gray-400">No entries yet</td></tr>
+            ` : rows.map((row, i) => `
+              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100 hover:bg-yellow-50 transition">
+                <td class="px-2 py-2 text-gray-500 whitespace-nowrap">${row.date}</td>
+                <td class="px-2 py-2 text-gray-700" style="max-width:160px; word-break:break-word;">${row.description}</td>
+                <td class="px-2 py-2 text-blue-500 whitespace-nowrap font-mono">${row.ref}</td>
+                <td class="px-2 py-2 text-right font-semibold ${row.isDebit ? 'text-red-600' : 'text-gray-300'}">
+                  ${row.isDebit ? row.amount.toLocaleString('en-IN') : '—'}
+                </td>
+                <td class="px-2 py-2 text-right font-semibold ${!row.isDebit ? 'text-green-600' : 'text-gray-300'}">
+                  ${!row.isDebit ? row.amount.toLocaleString('en-IN') : '—'}
+                </td>
+                <td class="px-2 py-2 text-right font-bold whitespace-nowrap ${row.runningBalance > 0 ? 'text-red-500' : 'text-green-600'}">
+                  ${Math.abs(row.runningBalance).toLocaleString('en-IN')}
+                  <span class="text-gray-400 font-normal">${row.runningBalance > 0 ? 'Dr' : 'Cr'}</span>
+                </td>
+                <td class="px-2 py-2 text-center whitespace-nowrap">
+                  <button onclick="editLedgerEntry('${row.entryId}', '${customerId}', ${row.amount}, '${row.safeNote}')"
+                    class="text-blue-400 hover:text-blue-600 mr-1">✏️</button>
+                  <button onclick="deleteLedgerEntry('${row.entryId}', '${customerId}')"
+                    class="text-red-400 hover:text-red-600">🗑</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="bg-gray-800 text-white font-bold text-xs">
+              <td colspan="3" class="px-2 py-2">Closing Balance</td>
+              <td class="px-2 py-2 text-right text-red-300">${totalDebit.toLocaleString('en-IN')}</td>
+              <td class="px-2 py-2 text-right text-green-300">${totalCredit.toLocaleString('en-IN')}</td>
+              <td class="px-2 py-2 text-right ${closingBalance > 0 ? 'text-red-300' : 'text-green-300'}">
+                ${Math.abs(closingBalance).toLocaleString('en-IN')}
+                <span class="font-normal">${closingBalance > 0 ? ' Dr' : ' Cr'}</span>
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ============================================
+// CREDIT ACTIONS
+// ============================================
 async function recordPayment(customerId, customerName, balance) {
   const amount = prompt(`Record payment for ${customerName}\nCurrent balance: ₹${balance}\n\nEnter amount paid:`);
   if (!amount || isNaN(amount)) return;
@@ -526,6 +623,47 @@ async function recordPayment(customerId, customerName, balance) {
   alert(`Payment of ₹${amount} recorded! ✅`);
   showAdminTab('credit');
 }
+
+async function addManualEntry(customerId, customerName, type) {
+  const label = type === 'debit' ? 'debit (amount customer owes)' : 'credit (amount customer paid)';
+  const amount = prompt(`Add manual ${label} for ${customerName}\n\nEnter amount:`);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt('Note for this entry (e.g. "Old dues from April", "Cash received"):') || (type === 'debit' ? 'Manual debit entry' : 'Manual credit entry');
+  await db.from('credit_ledger').insert({
+    customer_id: customerId,
+    amount: parseFloat(amount),
+    type: type,
+    note: note,
+  });
+  alert(`Manual ${type} of ₹${amount} added! ✅`);
+  showAdminTab('credit');
+}
+
+async function editLedgerEntry(entryId, customerId, currentAmount, currentNote) {
+  const amount = prompt(`Edit amount:\nCurrent: ₹${currentAmount}`, currentAmount);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt(`Edit note:\nCurrent: ${currentNote}`, currentNote);
+  if (note === null) return;
+  await db.from('credit_ledger').update({
+    amount: parseFloat(amount),
+    note: note,
+  }).eq('id', entryId);
+  alert('Entry updated! ✅');
+  showAdminTab('credit');
+}
+
+async function deleteLedgerEntry(entryId, customerId) {
+  if (!confirm('Delete this ledger entry? This cannot be undone.')) return;
+  const { error } = await db.from('credit_ledger').delete().eq('id', entryId);
+  if (error) {
+    alert('Error deleting: ' + error.message);
+    return;
+  }
+  alert('Entry deleted! ✅');
+  await toggleCreditDetail(customerId);
+  await toggleCreditDetail(customerId);
+}
+
 // ============================================
 // ACTIONS
 // ============================================
@@ -540,6 +678,7 @@ function addToCart(productId, variantId, name, size, price) {
   alert(`${name} (${size}) added to cart! 🛒`);
   render();
 }
+
 function addToCartQty(productId, variantId, name, size, price) {
   const qty = parseInt(document.getElementById('qty_' + variantId)?.value) || 1;
   const variant = state.products.flatMap(p => p.variants || []).find(v => v.id === variantId);
@@ -561,6 +700,7 @@ function addToCartQty(productId, variantId, name, size, price) {
   alert(`${name} (${size}) x${qty} added to cart! 🛒`);
   render();
 }
+
 function updateQty(index, delta) {
   state.cart[index].qty += delta;
   if (state.cart[index].qty <= 0) state.cart.splice(index, 1);
@@ -588,24 +728,21 @@ async function placeOrder() {
   }
 
   try {
-    // Upsert customer
     const { data: customer } = await db.from('customers')
       .upsert({ name, phone, address, gst_number: gst, transport_name: transport }, { onConflict: 'phone' })
       .select().single();
 
-    // Create order
     const { data: order } = await db.from('orders').insert({
       customer_id: customer.id,
       total_amount: cartTotal(),
       payment_method: payment,
-      payment_status: payment === 'online' ? 'pending' : 'pending',
+      payment_status: 'pending',
       order_status: 'pending',
       gst_number: gst,
       shipping_address: address,
       transport_name: transport,
     }).select().single();
 
-    // Insert order items
     const orderItems = state.cart.map(i => ({
       order_id: order.id,
       product_id: i.productId,
@@ -615,15 +752,15 @@ async function placeOrder() {
       total_price: i.price * i.qty,
     }));
     await db.from('order_items').insert(orderItems);
-// Reduce stock for each item ordered
-for (const item of state.cart) {
-  const variant = state.products.flatMap(p => p.variants || []).find(v => v.id === item.variantId);
-  if (variant) {
-    const newStock = Math.max(0, variant.stock_quantity - item.qty);
-    await db.from('product_variants').update({ stock_quantity: newStock }).eq('id', item.variantId);
-  }
-}
-    // If credit, add to ledger
+
+    for (const item of state.cart) {
+      const variant = state.products.flatMap(p => p.variants || []).find(v => v.id === item.variantId);
+      if (variant) {
+        const newStock = Math.max(0, variant.stock_quantity - item.qty);
+        await db.from('product_variants').update({ stock_quantity: newStock }).eq('id', item.variantId);
+      }
+    }
+
     if (payment === 'credit') {
       await db.from('credit_ledger').insert({
         customer_id: customer.id,
@@ -638,7 +775,7 @@ for (const item of state.cart) {
     saveCart();
     alert(`Order placed successfully! 🌿\nYour order ID: ${order.id.substring(0,8).toUpperCase()}\nTrack with phone: ${phone}`);
     state.products = [];
-navigate('home');
+    navigate('home');
   } catch (err) {
     alert('Error placing order. Please try again.');
     console.error(err);
@@ -682,7 +819,8 @@ function adminLogout() {
   state.adminLoggedIn = false;
   navigate('home');
 }
-  function editProduct(productId) {
+
+function editProduct(productId) {
   const product = state.adminProducts?.find(p => p.id === productId);
   if (!product) return;
   const form = document.getElementById('add_product_form');
@@ -694,14 +832,14 @@ function adminLogout() {
       <input id="ep_chemical" value="${product.chemical_name || ''}" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
       <input id="ep_desc" value="${product.description || ''}" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
       <div class="font-semibold text-sm mb-1 mt-2">Update Stock & Price</div>
-${(product.product_variants || []).map(v => `
-  <div class="flex gap-2 mb-2 items-center">
-    <span class="text-sm w-16">${v.bag_size}</span>
-    <input id="ep_mrp_${v.id}" type="number" value="${v.mrp || 0}" placeholder="MRP" class="border rounded px-2 py-1 text-sm w-24" />
-    <input id="ep_price_${v.id}" type="number" value="${v.price}" placeholder="Price" class="border rounded px-2 py-1 text-sm w-24" />
-    <input id="ep_stock_${v.id}" type="number" value="${v.stock_quantity}" placeholder="Stock" class="border rounded px-2 py-1 text-sm w-20" />
-  </div>`).join('')}
-  <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
+      ${(product.product_variants || []).map(v => `
+        <div class="flex gap-2 mb-2 items-center">
+          <span class="text-sm w-16">${v.bag_size}</span>
+          <input id="ep_mrp_${v.id}" type="number" value="${v.mrp || 0}" placeholder="MRP" class="border rounded px-2 py-1 text-sm w-24" />
+          <input id="ep_price_${v.id}" type="number" value="${v.price}" placeholder="Price" class="border rounded px-2 py-1 text-sm w-24" />
+          <input id="ep_stock_${v.id}" type="number" value="${v.stock_quantity}" placeholder="Stock" class="border rounded px-2 py-1 text-sm w-20" />
+        </div>`).join('')}
+      <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
     </div>`;
 }
 
@@ -710,25 +848,26 @@ async function saveEditProduct(productId) {
   const company = document.getElementById('ep_company').value.trim();
   const chemical = document.getElementById('ep_chemical').value.trim();
   const desc = document.getElementById('ep_desc').value.trim();
-  await db.from('products').update({ 
-    name, company_name: company, chemical_name: chemical, description: desc 
+  await db.from('products').update({
+    name, company_name: company, chemical_name: chemical, description: desc
   }).eq('id', productId);
   const product = state.adminProducts?.find(p => p.id === productId);
-if (product?.product_variants) {
-  for (const v of product.product_variants) {
-    const mrp = document.getElementById('ep_mrp_' + v.id)?.value;
-    const price = document.getElementById('ep_price_' + v.id)?.value;
-    const stock = document.getElementById('ep_stock_' + v.id)?.value;
-    if (price) await db.from('product_variants').update({ 
-      mrp: parseFloat(mrp), 
-      price: parseFloat(price), 
-      stock_quantity: parseInt(stock) 
-    }).eq('id', v.id);
+  if (product?.product_variants) {
+    for (const v of product.product_variants) {
+      const mrp = document.getElementById('ep_mrp_' + v.id)?.value;
+      const price = document.getElementById('ep_price_' + v.id)?.value;
+      const stock = document.getElementById('ep_stock_' + v.id)?.value;
+      if (price) await db.from('product_variants').update({
+        mrp: parseFloat(mrp),
+        price: parseFloat(price),
+        stock_quantity: parseInt(stock)
+      }).eq('id', v.id);
+    }
   }
-}
   alert('Product updated! 🌿');
   showAdminTab('products');
 }
+
 async function deleteProduct(productId) {
   if (!confirm('Are you sure you want to delete this product?')) return;
   await db.from('product_variants').delete().eq('product_id', productId);
@@ -736,6 +875,7 @@ async function deleteProduct(productId) {
   alert('Product deleted!');
   showAdminTab('products');
 }
+
 async function updateOrderStatus(orderId, status) {
   await db.from('orders').update({ order_status: status }).eq('id', orderId);
 }
@@ -755,13 +895,13 @@ function showAddProduct() {
         <option>Weedicides</option>
       </select>
       <input id="np_desc" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-<input id="np_company" placeholder="Company Name (e.g. Bayer, PVR Agro)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-<input id="np_chemical" placeholder="Chemical Name (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <input id="np_company" placeholder="Company Name (e.g. Bayer, PVR Agro)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <input id="np_chemical" placeholder="Chemical Name (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
       <div class="mb-2">
-  <label class="text-sm font-medium text-gray-700">Product Image (optional)</label>
-  <input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
-</div>
-<div class="font-semibold text-sm mb-1">Variants</div>
+        <label class="text-sm font-medium text-gray-700">Product Image (optional)</label>
+        <input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
+      </div>
+      <div class="font-semibold text-sm mb-1">Variants</div>
       <div id="np_variants">
         <div class="flex gap-2 mb-2">
           <input placeholder="Size (e.g. 1L)" class="variant_size border rounded px-2 py-1 text-sm flex-1" />
@@ -792,20 +932,22 @@ async function saveNewProduct() {
   const category = document.getElementById('np_category').value;
   const desc = document.getElementById('np_desc').value.trim();
   if (!name) { alert('Product name is required!'); return; }
-let image_url = null;
-const imageFile = document.getElementById('np_image').files[0];
-if (imageFile) {
-  const fileExt = imageFile.name.split('.').pop();
-  const fileName = `${Date.now()}.${fileExt}`;
-  const { data: uploadData } = await db.storage.from('product-images').upload(fileName, imageFile);
-  if (uploadData) {
-    const { data: urlData } = db.storage.from('product-images').getPublicUrl(fileName);
-    image_url = urlData.publicUrl;
+  let image_url = null;
+  const imageFile = document.getElementById('np_image').files[0];
+  if (imageFile) {
+    const fileExt = imageFile.name.split('.').pop();
+    const fileName = `${Date.now()}.${fileExt}`;
+    const { data: uploadData } = await db.storage.from('product-images').upload(fileName, imageFile);
+    if (uploadData) {
+      const { data: urlData } = db.storage.from('product-images').getPublicUrl(fileName);
+      image_url = urlData.publicUrl;
+    }
   }
-}
   const company = document.getElementById('np_company').value.trim();
-const chemical = document.getElementById('np_chemical').value.trim();
-const { data: product } = await db.from('products').insert({ name, category, description: desc, company_name: company, chemical_name: chemical, image_url, is_available: true }).select().single();
+  const chemical = document.getElementById('np_chemical').value.trim();
+  const { data: product } = await db.from('products').insert({
+    name, category, description: desc, company_name: company, chemical_name: chemical, image_url, is_available: true
+  }).select().single();
 
   const sizes = document.querySelectorAll('.variant_size');
   const mrps = document.querySelectorAll('.variant_mrp');
@@ -828,132 +970,7 @@ const { data: product } = await db.from('products').insert({ name, category, des
   alert('Product added successfully! 🌿');
   showAdminTab('products');
 }
-async function toggleCreditDetail(customerId) {
-  const panel = document.getElementById('credit_detail_' + customerId);
-  if (!panel) return;
-  if (!panel.classList.contains('hidden')) {
-    panel.classList.add('hidden');
-    panel.innerHTML = '';
-    return;
-  }
-  panel.classList.remove('hidden');
-  panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
 
-  // Load orders for this customer
-  const { data: ledger } = await db.from('credit_ledger')
-    .select('*')
-    .eq('customer_id', customerId)
-    .order('created_at', { ascending: false });
-
-  const orderIds = (ledger || []).filter(e => e.order_id).map(e => e.order_id);
-  let orderItemsMap = {};
-  if (orderIds.length > 0) {
-    const { data: allItems } = await db.from('order_items')
-      .select('*, products(name), product_variants(bag_size)')
-      .in('order_id', orderIds);
-    (allItems || []).forEach(item => {
-      if (!orderItemsMap[item.order_id]) orderItemsMap[item.order_id] = [];
-      orderItemsMap[item.order_id].push(`${item.products?.name} ${item.product_variants?.bag_size} x${item.quantity}`);
-    });
-  }
-
-  // Load full ledger for this customer
-  const { data: ledger } = await db.from('credit_ledger')
-    .select('*')
-    .eq('customer_id', customerId)
-    .order('created_at', { ascending: false });
-
-  const orderIds = (ledger || []).filter(e => e.order_id).map(e => e.order_id);
-  let orderItemsMap = {};
-  if (orderIds.length > 0) {
-    const { data: allItems } = await db.from('order_items')
-      .select('*, products(name), product_variants(bag_size)')
-      .in('order_id', orderIds);
-    (allItems || []).forEach(item => {
-      if (!orderItemsMap[item.order_id]) orderItemsMap[item.order_id] = [];
-      orderItemsMap[item.order_id].push(`${item.products?.name} ${item.product_variants?.bag_size} x${item.quantity}`);
-    });
-  }
-
-  panel.innerHTML = `
-    <div class="border-t pt-3">
-      <div class="font-semibold text-sm text-gray-700 mb-2">📦 Orders</div>
-      <div class="space-y-2 mb-4">
-        ${(orders || []).length === 0 ? '<div class="text-xs text-gray-400">No orders found</div>' : ''}
-        ${(orders || []).map(o => `
-          <div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 text-xs">
-            <div>
-              <div class="font-semibold">#${o.id.substring(0,8).toUpperCase()}</div>
-              <div class="text-gray-400">${new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
-              <div class="text-gray-500">${o.payment_method} · ${o.order_status}</div>
-            </div>
-            <div class="text-right">
-              <div class="font-bold text-gray-800">₹${o.total_amount}</div>
-            </div>
-          </div>`).join('')}
-      </div>
-      <div class="font-semibold text-sm text-gray-700 mb-2">📒 Full Ledger</div>
-      <div class="space-y-2">
-        ${(ledger || []).length === 0 ? '<div class="text-xs text-gray-400">No ledger entries</div>' : ''}
-        ${(ledger || []).map(entry => `
-          <div class="flex justify-between items-center rounded-lg px-3 py-2 text-xs ${entry.type === 'debit' ? 'bg-red-50' : 'bg-green-50'}">
-            <div class="flex-1">
-              <div class="font-semibold ${entry.type === 'debit' ? 'text-red-700' : 'text-green-700'}">
-                ${entry.type === 'debit' ? '▲ Debit' : '▼ Credit'}
-              </div>
-              <div class="text-gray-500">${entry.note || '-'}</div>
-              <div class="text-gray-400">${new Date(entry.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
-              ${entry.order_id ? `<div class="text-gray-400">#${entry.order_id.substring(0,8).toUpperCase()}: ${(orderItemsMap[entry.order_id] || []).join(', ') || 'No items found'}</div>` : '<div class="text-gray-400 italic">Manual entry</div>'}
-            <div class="text-right ml-2">
-              <div class="font-bold text-sm ${entry.type === 'debit' ? 'text-red-600' : 'text-green-600'}">
-                ${entry.type === 'debit' ? '+' : '-'}₹${entry.amount}
-              </div>
-              <div class="flex gap-1 mt-1 justify-end">
-                <button onclick="editLedgerEntry('${entry.id}', '${customerId}', ${entry.amount}, \`${(entry.note || '').replace(/`/g, "'")}\`)"
-                  class="text-blue-500 underline">Edit</button>
-                <button onclick="deleteLedgerEntry('${entry.id}', '${customerId}')"
-                  class="text-red-400 underline">Del</button>
-              </div>
-            </div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-}
-
-async function addManualEntry(customerId, customerName, type) {
-  const label = type === 'debit' ? 'debit (amount customer owes)' : 'credit (amount customer paid)';
-  const amount = prompt(`Add manual ${label} for ${customerName}\n\nEnter amount:`);
-  if (!amount || isNaN(amount)) return;
-  const note = prompt(`Note for this entry (e.g. "Old dues from April", "Cash received"):`) || (type === 'debit' ? 'Manual debit entry' : 'Manual credit entry');
-  await db.from('credit_ledger').insert({
-    customer_id: customerId,
-    amount: parseFloat(amount),
-    type: type,
-    note: note,
-  });
-  alert(`Manual ${type} of ₹${amount} added! ✅`);
-  showAdminTab('credit');
-}
-
-async function editLedgerEntry(entryId, customerId, currentAmount, currentNote) {
-  const amount = prompt(`Edit amount:\nCurrent: ₹${currentAmount}`, currentAmount);
-  if (!amount || isNaN(amount)) return;
-  const note = prompt(`Edit note:\nCurrent: ${currentNote}`, currentNote);
-  if (note === null) return;
-  await db.from('credit_ledger').update({
-    amount: parseFloat(amount),
-    note: note,
-  }).eq('id', entryId);
-  alert('Entry updated! ✅');
-  showAdminTab('credit');
-}
-
-async function deleteLedgerEntry(entryId, customerId) {
-  if (!confirm('Delete this ledger entry? This cannot be undone.')) return;
-  await db.from('credit_ledger').delete().eq('id', entryId);
-  alert('Entry deleted!');
-  showAdminTab('credit');
-}
 function navigate(page) {
   state.page = page;
   render();
