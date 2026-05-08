@@ -608,7 +608,14 @@ async function placeOrder() {
       total_price: i.price * i.qty,
     }));
     await db.from('order_items').insert(orderItems);
-
+// Reduce stock for each item ordered
+for (const item of state.cart) {
+  const variant = state.products.flatMap(p => p.variants || []).find(v => v.id === item.variantId);
+  if (variant) {
+    const newStock = Math.max(0, variant.stock_quantity - item.qty);
+    await db.from('product_variants').update({ stock_quantity: newStock }).eq('id', item.variantId);
+  }
+}
     // If credit, add to ledger
     if (payment === 'credit') {
       await db.from('credit_ledger').insert({
