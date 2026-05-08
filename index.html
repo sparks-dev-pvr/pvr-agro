@@ -486,22 +486,39 @@ async function showAdminTab(tab) {
       <div class="space-y-3">
         ${(credits || []).map(c => `
           <div class="bg-white rounded-xl shadow p-4">
-            <div class="flex justify-between items-center">
-              <div>
-                <div class="font-bold">${c.name}</div>
-                <div class="text-sm text-gray-500">${c.phone}</div>
-                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
-              </div>
-              <div class="text-right">
-                <div class="text-xs text-gray-400">Total Owed</div>
-                <div class="font-bold text-red-500 text-lg">₹${c.total_owed}</div>
-              </div>
-            </div>
+  <div class="flex justify-between items-center">
+    <div>
+      <div class="font-bold">${c.name}</div>
+      <div class="text-sm text-gray-500">${c.phone}</div>
+      <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString()}</div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs text-gray-400">Total Owed: ₹${c.total_owed}</div>
+      <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
+      <div class="font-bold text-red-500 text-lg">Balance: ₹${c.balance}</div>
+      <button onclick="recordPayment('${c.customer_id}', '${c.name}', ${c.balance})"
+        class="mt-1 bg-green-700 text-white text-xs px-3 py-1 rounded-lg">
+        💰 Record Payment
+      </button>
+    </div>
+  </div>
+</div>  
           </div>`).join('')}
       </div>`;
   }
 }
-
+async function recordPayment(customerId, customerName, balance) {
+  const amount = prompt(`Record payment for ${customerName}\nCurrent balance: ₹${balance}\n\nEnter amount paid:`);
+  if (!amount || isNaN(amount)) return;
+  await db.from('credit_ledger').insert({
+    customer_id: customerId,
+    amount: parseFloat(amount),
+    type: 'credit',
+    note: 'Payment received',
+  });
+  alert(`Payment of ₹${amount} recorded! ✅`);
+  showAdminTab('credit');
+}
 // ============================================
 // ACTIONS
 // ============================================
