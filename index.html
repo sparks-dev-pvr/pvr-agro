@@ -389,7 +389,8 @@ async function showAdminTab(tab) {
     window._allItems = items || [];
     renderOrdersTab('pending');
     return;
-      function renderOrdersTab(activeStatus) {
+  }
+  function renderOrdersTab(activeStatus) {
   const content = document.getElementById('admin_content');
   if (!content) return;
   const orders = window._allOrders || [];
