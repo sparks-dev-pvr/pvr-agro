@@ -440,6 +440,7 @@ async function showAdminTab(tab) {
 
   } else if (tab === 'products') {
     const { data: products } = await db.from('products').select('*, product_variants(*)');
+    state.adminProducts = products;
     content.innerHTML = `
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold">Products</h2>
@@ -456,7 +457,8 @@ async function showAdminTab(tab) {
               </div>
               <div class="flex items-center gap-2">
   <div class="text-xs text-gray-400">${(p.product_variants || []).length} variants</div>
-  <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
+  <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600 mr-2">✏️ Edit</button>
+<button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
 </div>
             </div>
             <div class="mt-2 space-y-1">
@@ -622,6 +624,32 @@ function adminLogin() {
 function adminLogout() {
   state.adminLoggedIn = false;
   navigate('home');
+}
+  function editProduct(productId) {
+  const product = state.adminProducts?.find(p => p.id === productId);
+  if (!product) return;
+  const form = document.getElementById('add_product_form');
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <h3 class="font-bold mb-3">Edit Product</h3>
+      <input id="ep_name" value="${product.name}" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <input id="ep_company" value="${product.company_name || ''}" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <input id="ep_chemical" value="${product.chemical_name || ''}" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <input id="ep_desc" value="${product.description || ''}" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
+      <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
+    </div>`;
+}
+
+async function saveEditProduct(productId) {
+  const name = document.getElementById('ep_name').value.trim();
+  const company = document.getElementById('ep_company').value.trim();
+  const chemical = document.getElementById('ep_chemical').value.trim();
+  const desc = document.getElementById('ep_desc').value.trim();
+  await db.from('products').update({ 
+    name, company_name: company, chemical_name: chemical, description: desc 
+  }).eq('id', productId);
+  alert('Product updated! 🌿');
+  showAdminTab('products');
 }
 async function deleteProduct(productId) {
   if (!confirm('Are you sure you want to delete this product?')) return;
