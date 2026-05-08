@@ -630,7 +630,8 @@ for (const item of state.cart) {
     state.cart = [];
     saveCart();
     alert(`Order placed successfully! 🌿\nYour order ID: ${order.id.substring(0,8).toUpperCase()}\nTrack with phone: ${phone}`);
-    navigate('home');
+    state.products = [];
+navigate('home');
   } catch (err) {
     alert('Error placing order. Please try again.');
     console.error(err);
