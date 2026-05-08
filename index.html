@@ -651,7 +651,11 @@ function showAddProduct() {
       <input id="np_desc" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
 <input id="np_company" placeholder="Company Name (e.g. Bayer, PVR Agro)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
 <input id="np_chemical" placeholder="Chemical Name (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <div class="font-semibold text-sm mb-1">Variants</div>
+      <div class="mb-2">
+  <label class="text-sm font-medium text-gray-700">Product Image (optional)</label>
+  <input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
+</div>
+<div class="font-semibold text-sm mb-1">Variants</div>
       <div id="np_variants">
         <div class="flex gap-2 mb-2">
           <input placeholder="Size (e.g. 1L)" class="variant_size border rounded px-2 py-1 text-sm flex-1" />
@@ -682,10 +686,20 @@ async function saveNewProduct() {
   const category = document.getElementById('np_category').value;
   const desc = document.getElementById('np_desc').value.trim();
   if (!name) { alert('Product name is required!'); return; }
-
+let image_url = null;
+const imageFile = document.getElementById('np_image').files[0];
+if (imageFile) {
+  const fileExt = imageFile.name.split('.').pop();
+  const fileName = `${Date.now()}.${fileExt}`;
+  const { data: uploadData } = await db.storage.from('product-images').upload(fileName, imageFile);
+  if (uploadData) {
+    const { data: urlData } = db.storage.from('product-images').getPublicUrl(fileName);
+    image_url = urlData.publicUrl;
+  }
+}
   const company = document.getElementById('np_company').value.trim();
 const chemical = document.getElementById('np_chemical').value.trim();
-const { data: product } = await db.from('products').insert({ name, category, description: desc, company_name: company, chemical_name: chemical, is_available: true }).select().single();
+const { data: product } = await db.from('products').insert({ name, category, description: desc, company_name: company, chemical_name: chemical, image_url, is_available: true }).select().single();
 
   const sizes = document.querySelectorAll('.variant_size');
   const mrps = document.querySelectorAll('.variant_mrp');
