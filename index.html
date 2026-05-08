@@ -956,6 +956,12 @@ async function deleteProduct(productId) {
 
 async function updateOrderStatus(orderId, status) {
   await db.from('orders').update({ order_status: status }).eq('id', orderId);
+  const updated = window._allOrders.find(o => o.id === orderId);
+  if (updated) updated.order_status = status;
+  const activeTabs = document.querySelectorAll('[onclick^="renderOrdersTab"]');
+  const activeBtn = Array.from(activeTabs).find(b => b.classList.contains('text-white'));
+  const currentStatus = activeBtn ? activeBtn.getAttribute('onclick').match(/'(\w+)'/)?.[1] : 'pending';
+  renderOrdersTab(currentStatus);
 }
 
 function showAddProduct() {
