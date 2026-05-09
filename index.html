@@ -128,8 +128,7 @@ function renderHome() {
           <div class="text-xs text-gray-500 mb-1">${p.company_name ? p.company_name + ' · ' : ''}${p.category}</div>
           ${p.chemical_name ? `<div class="text-xs text-blue-400">${p.chemical_name}</div>` : ''}
           ${firstPkg ? `
-            <div class="text-xs text-gray-400 line-through">MRP: ₹${firstPkg.mrp_per_unit || '-'}/unit</div>
-            <div class="text-green-700 font-bold text-sm">₹${firstPkg.price_per_unit || '-'}/unit</div>
+            <div class="text-green-700 font-bold text-sm">Billing: ₹${firstPkg.price_per_unit || '-'}/unit</div>
             <div class="text-xs text-gray-500">₹${firstPkg.price_per_box}/${firstPkg.box_label}</div>
           ` : '<div class="text-xs text-gray-400">No variants</div>'}
         </div>`; }).join('')}
