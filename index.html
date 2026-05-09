@@ -209,12 +209,8 @@ function updatePackagingDetails(productId, variantId) {
       <div class="font-semibold text-gray-800 mb-1">${pkg.box_label}</div>
       <div class="text-xs text-gray-500 mb-2">${pkg.units_per_box} units per box</div>
       <div class="grid grid-cols-3 gap-2 mb-3">
-        <div class="bg-white rounded-lg p-2 text-center border">
-          <div class="text-xs text-gray-400">MRP/unit</div>
-          <div class="text-gray-400 line-through text-sm">₹${pkg.mrp_per_unit || '-'}</div>
-        </div>
         <div class="bg-white rounded-lg p-2 text-center border border-green-200">
-          <div class="text-xs text-gray-500">Price/unit</div>
+          <div class="text-xs text-gray-500">Billing/unit</div>
           <div class="text-green-700 font-bold text-sm">₹${pkg.price_per_unit || '-'}</div>
         </div>
         <div class="bg-white rounded-lg p-2 text-center border border-blue-200">
