@@ -341,7 +341,7 @@ function renderCheckout() {
           <input type="radio" name="payment" value="credit" class="accent-green-700" /> Credit / Pay Later
         </label>
       </div>
-      <button onclick="placeOrder()" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800 mt-2">
+      <button onclick="this.disabled=true; this.textContent='Placing Order...'; placeOrder();" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800 mt-2">
         Place Order 🌿
       </button>
     </div>
