@@ -1,9 +1,16 @@
+cat > /home/claude/index.html << 'ENDOFFILE'
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>PVR Agro</title>
+<link rel="manifest" id="manifest-placeholder" />
+<meta name="theme-color" content="#15803d" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="PVR Agro" />
+<link rel="apple-touch-icon" href="https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg" />
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -13,6 +20,16 @@
 </head>
 <body class="bg-gray-50">
 <div id="app"></div>
+<div id="install_banner" class="hidden fixed bottom-0 left-0 right-0 bg-green-700 text-white p-3 flex items-center justify-between z-50 shadow-lg">
+  <div>
+    <div class="font-bold text-sm">Install PVR Agro</div>
+    <div class="text-xs text-green-200">Add to home screen for quick access</div>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="installApp()" class="bg-white text-green-700 px-3 py-1 rounded-lg text-sm font-bold">Install</button>
+    <button onclick="document.getElementById('install_banner').classList.add('hidden')" class="text-green-200 px-2 py-1 text-sm">✕</button>
+  </div>
+</div>
 <script>
 const SUPABASE_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZGphanVoZnFtdXV6amVqbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDY2ODcsImV4cCI6MjA5MzYyMjY4N30.Y1w43s7vx2V_XkgYvSUB0xTIsnGGFWyCU09z_r_otEg';
@@ -20,6 +37,63 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const LOGO_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg';
 
+// PWA Manifest
+const manifest = {
+  name: 'PVR Agro',
+  short_name: 'PVR Agro',
+  description: 'P.V.R Agrochemicals - Wholesale Agricultural Supplies',
+  start_url: '/',
+  display: 'standalone',
+  background_color: '#ffffff',
+  theme_color: '#15803d',
+  orientation: 'portrait',
+  icons: [
+    { src: LOGO_URL, sizes: '192x192', type: 'image/jpeg' },
+    { src: LOGO_URL, sizes: '512x512', type: 'image/jpeg' }
+  ]
+};
+const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+const manifestUrl = URL.createObjectURL(manifestBlob);
+document.getElementById('manifest-placeholder').setAttribute('href', manifestUrl);
+
+// PWA Install
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install_banner').classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install_banner').classList.add('hidden');
+  deferredPrompt = null;
+});
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      document.getElementById('install_banner').classList.add('hidden');
+    });
+  }
+}
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'pvr-agro-v1';
+    self.addEventListener('install', e => { self.skipWaiting(); });
+    self.addEventListener('activate', e => { self.clients.claim(); });
+    self.addEventListener('fetch', e => {
+      if (e.request.method !== 'GET') return;
+      if (e.request.url.includes('supabase.co')) return;
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
+}
+
+// STATE
 let state = {
   page: 'home',
   products: [],
@@ -105,13 +179,11 @@ function renderHome() {
       <button onclick="state.search=''; state.products=[]; render();"
         class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
     </div>
-    <div class="flex gap-2 overflow-x-auto pb-2 mb-6">
-      ${categories.map(c => `
-        <button onclick="state.category='${c}'; render();"
-          class="whitespace-nowrap px-3 py-1 rounded-full text-sm font-medium border transition
-          ${state.category === c ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-700 border-gray-300'}">
-          ${c === 'all' ? 'All Products' : c}
-        </button>`).join('')}
+    <div class="mb-6">
+      <select onchange="state.category=this.value; render();"
+        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500 bg-white text-gray-700 font-medium">
+        ${categories.map(c => `<option value="${c}" ${state.category === c ? 'selected' : ''}>${c === 'all' ? '🌾 All Products' : getCategoryStyle(c).icon + ' ' + c}</option>`).join('')}
+      </select>
     </div>
     ${state.loading ? '<div class="text-center py-10 text-gray-500">Loading products...</div>' : ''}
     <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -208,10 +280,13 @@ function updatePackagingDetails(productId, variantId) {
   details.innerHTML = `
     <div class="border border-gray-200 rounded-lg p-4 mb-3 bg-gray-50">
       <div class="font-semibold text-gray-800 mb-1">${pkg.box_label}</div>
-      <div class="text-xs text-gray-500 mb-2">${pkg.units_per_box} units per box</div>
+      <div class="text-xs text-gray-500 mb-3">${pkg.units_per_box} units per box</div>
       <div class="grid grid-cols-3 gap-2 mb-3">
+        <div class="bg-white rounded-lg p-2 text-center border">
+          <div class="text-xs text-gray-400">MRP/unit</div>
+          <div class="text-gray-600 text-sm">₹${pkg.mrp_per_unit || '-'}</div>
+        </div>
         <div class="bg-white rounded-lg p-2 text-center border border-green-200">
-          <div class="text-xs text-gray-400">MRP: ₹${pkg.mrp_per_unit || '-'}/unit</div>
           <div class="text-xs text-gray-500">Billing/unit</div>
           <div class="text-green-700 font-bold text-sm">₹${pkg.price_per_unit || '-'}</div>
         </div>
@@ -244,7 +319,7 @@ function addToCartPkg(productId, variantId, pkgId) {
   const pkg = variant?.packagings.find(pk => pk.id === pkgId);
   if (!pkg) return;
   const qty = parseInt(document.getElementById('box_qty')?.value) || 1;
-  if (qty > pkg.stock_quantity) { alert(`Only ${pkg.stock_quantity} boxes available!`); return; }
+  if (qty > pkg.stock_quantity) { alert('Only ' + pkg.stock_quantity + ' boxes available!'); return; }
   const existing = state.cart.find(i => i.pkgId === pkgId);
   if (existing) { existing.qty += qty; }
   else {
@@ -257,7 +332,7 @@ function addToCartPkg(productId, variantId, pkgId) {
     });
   }
   saveCart();
-  alert(`${product.name} (${variant.bag_size} · ${pkg.box_label}) x${qty} added to cart! 🛒`);
+  alert(product.name + ' (' + variant.bag_size + ' · ' + pkg.box_label + ') x' + qty + ' added to cart! 🛒');
   render();
 }
 
@@ -294,12 +369,10 @@ function renderCart() {
       </div>
       <div class="bg-white rounded-xl shadow p-4 mb-4">
         <div class="flex justify-between font-bold text-lg">
-          <span>Total</span>
-          <span class="text-green-700">₹${cartTotal()}</span>
+          <span>Total</span><span class="text-green-700">₹${cartTotal()}</span>
         </div>
       </div>
-      <button onclick="navigate('checkout')"
-        class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800">
+      <button onclick="navigate('checkout')" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800">
         Proceed to Checkout
       </button>`}
   </div>`;
@@ -338,7 +411,8 @@ function renderCheckout() {
           <input type="radio" name="payment" value="credit" class="accent-green-700" /> Credit / Pay Later
         </label>
       </div>
-      <button onclick="this.disabled=true; this.textContent='Placing Order...'; placeOrder();" class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800 mt-2">
+      <button onclick="this.disabled=true; this.textContent='Placing Order...'; placeOrder();"
+        class="w-full bg-green-700 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-800 mt-2">
         Place Order 🌿
       </button>
     </div>
@@ -464,7 +538,7 @@ async function showAdminTab(tab) {
                 <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
               </div>
             </div>
-            <div class="mt-2 space-y-1 ml-15">
+            <div class="mt-2 space-y-1">
               ${(p.product_variants || []).map(v => `
                 <div class="text-xs text-gray-600 ml-2">
                   <span class="font-medium">${v.bag_size}</span>
@@ -509,9 +583,6 @@ async function showAdminTab(tab) {
   }
 }
 
-// ============================================
-// ORDERS TAB
-// ============================================
 function renderOrdersTab(activeStatus) {
   const content = document.getElementById('admin_content');
   if (!content) return;
@@ -641,201 +712,49 @@ async function updateOrderStatus(orderId, status, currentTab) {
   renderOrdersTab(currentTab);
 }
 
-// ============================================
-// INVOICE
-// ============================================
 async function generateInvoice(orderId) {
   const order = (window._allOrders||[]).find(o => o.id === orderId);
   if (!order) return;
   const items = (window._allItems||[]).filter(i => i.order_id === orderId);
   const { data: customer } = await db.from('customers').select('*').eq('id', order.customer_id).single();
-
   const batchNo = prompt('Batch Number (leave blank if not applicable):', '') || '';
   const mfgDate = prompt('Manufacturing Date (e.g. 01/01/2025):', '') || '';
   const expDate = prompt('Expiry Date (e.g. 01/01/2027):', '') || '';
-
-  // Ask GST per item
   const itemGsts = [];
   for (const item of items) {
-    const gst = prompt(`GST % for "${item.products?.name}" (enter 0 if no GST):`, '18');
+    const gst = prompt('GST % for "' + item.products?.name + '" (enter 0 if no GST):', '18');
     if (gst === null) return;
     itemGsts.push(parseFloat(gst) || 0);
   }
-
   const invoiceNo = 'P-26-' + order.id.substring(0,4).toUpperCase();
   const invoiceDate = new Date(order.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'});
-
-  let totalTaxable = 0;
-  let totalCgst = 0;
-  let totalSgst = 0;
+  let totalTaxable = 0, totalCgst = 0, totalSgst = 0;
   const itemRows = items.map((item, idx) => {
     const gst = itemGsts[idx];
     const taxable = item.total_price;
     const cgst = gst > 0 ? taxable * gst / 2 / 100 : 0;
     const sgst = gst > 0 ? taxable * gst / 2 / 100 : 0;
-    totalTaxable += taxable;
-    totalCgst += cgst;
-    totalSgst += sgst;
+    totalTaxable += taxable; totalCgst += cgst; totalSgst += sgst;
     return { item, gst, taxable, cgst, sgst };
   });
-
   const totalTax = totalCgst + totalSgst;
   const grandTotal = totalTaxable + totalTax;
   const roundOff = Math.round(grandTotal) - grandTotal;
   const finalTotal = Math.round(grandTotal);
-
-  const invoiceHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
-  <title>Tax Invoice - ${invoiceNo}</title>
-  <style>
-    body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#000;}
-    table{width:100%;border-collapse:collapse;}
-    th,td{border:1px solid #000;padding:4px 6px;font-size:10px;}
-    th{background:#f0f0f0;font-weight:bold;}
-    .tr{text-align:right;} .tc{text-align:center;}
-    .title{text-align:center;font-size:14px;font-weight:bold;margin-bottom:8px;}
-    .bold{font-weight:bold;}
-    @media print{button{display:none;}}
-  </style></head><body>
-  <div class="title">Tax Invoice</div>
-  <table><tr>
-    <td style="width:50%;vertical-align:top;padding:8px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <img src="${LOGO_URL}" style="width:50px;height:50px;object-fit:cover;border-radius:50%;" />
-        <div>
-          <div style="font-size:15px;font-weight:bold;">P.V.R AGROCHEMICALS</div>
-          <div style="color:#cc0000;font-size:10px;">BLOCK NO 31 PLOT NO 45 DOOR NO 4-10-1246 AUTO NAGAR<br>RANGA REDDY DISTRICT</div>
-          <div>Phone no: 9573711019</div>
-          <div>Email: pvragrochem@gmail.com</div>
-          <div>GSTIN: 36AJRPR1684F1ZP</div>
-          <div>State: 36-Telangana</div>
-        </div>
-      </div>
-    </td>
-    <td style="width:50%;vertical-align:top;padding:0;">
-      <table style="width:100%;height:100%;">
-        <tr>
-          <td style="padding:4px;"><b>Invoice No.</b><br>${invoiceNo}</td>
-          <td style="padding:4px;"><b>Date</b><br>${invoiceDate}</td>
-        </tr>
-        <tr>
-          <td style="padding:4px;"><b>Place of Supply</b><br>36-Telangana</td>
-          <td style="padding:4px;"><b>Transport Name</b><br>${order.transport_name||'-'}</td>
-        </tr>
-        <tr>
-          <td colspan="2" style="padding:4px;"><b>Delivery Location</b><br>${order.shipping_address||'-'}</td>
-        </tr>
-      </table>
-    </td>
-  </tr></table>
-  <table style="margin-top:4px;"><tr>
-    <td style="width:50%;vertical-align:top;padding:8px;">
-      <b>Bill To</b><br>
-      <b>${customer?.name||'-'}</b><br>
-      ${customer?.address||''}<br>
-      Contact No.: ${customer?.phone||''}<br>
-      ${customer?.gst_number?'GSTIN: '+customer.gst_number+'<br>':''}
-      State: 36-Telangana
-    </td>
-    <td style="width:50%;vertical-align:top;padding:8px;">
-      <b>Ship To</b><br>${order.shipping_address||'-'}
-    </td>
-  </tr></table>
-  <table style="margin-top:4px;">
-    <thead><tr>
-      <th class="tc">#</th><th>Item Name</th><th>HSN/SAC</th>
-      <th class="tc">Batch</th><th class="tc">Exp.Date</th><th class="tc">Mfg.Date</th>
-      <th class="tc">Size</th><th class="tc">Qty</th><th class="tc">Unit</th>
-      <th class="tr">Price/Unit</th><th class="tc">GST%</th><th class="tr">Amount</th>
-    </tr></thead>
-    <tbody>
-      ${itemRows.map(({item,gst},idx) => `
-        <tr>
-          <td class="tc">${idx+1}</td>
-          <td>${item.products?.name||'-'}</td>
-          <td class="tc">-</td>
-          <td class="tc">${batchNo||'-'}</td>
-          <td class="tc">${expDate||'-'}</td>
-          <td class="tc">${mfgDate||'-'}</td>
-          <td class="tc">${item.product_variants?.bag_size||'-'}</td>
-          <td class="tc">${item.quantity}</td>
-          <td class="tc">Pcs</td>
-          <td class="tr">₹ ${item.unit_price}</td>
-          <td class="tc">${gst}%</td>
-          <td class="tr">₹ ${item.total_price.toFixed(2)}</td>
-        </tr>`).join('')}
-      <tr class="bold">
-        <td colspan="7">Total</td>
-        <td class="tc">${items.reduce((s,i)=>s+i.quantity,0)}</td>
-        <td colspan="3"></td>
-        <td class="tr">₹ ${totalTaxable.toFixed(2)}</td>
-      </tr>
-    </tbody>
-  </table>
-  <table style="margin-top:4px;"><tr>
-    <td style="width:50%;vertical-align:top;padding:8px;">
-      <b>Invoice Amount In Words</b><br>${numberToWords(finalTotal)} Rupees only
-    </td>
-    <td style="width:50%;vertical-align:top;padding:0;">
-      <table style="width:100%;border:none;">
-        <tr><td style="border:none;padding:2px 4px;"><b>Amounts</b></td><td style="border:none;"></td></tr>
-        <tr><td style="border:none;padding:2px 4px;">Sub Total</td><td style="border:none;padding:2px 4px;" class="tr">₹ ${totalTaxable.toFixed(2)}</td></tr>
-        <tr><td style="border:none;padding:2px 4px;">CGST</td><td style="border:none;padding:2px 4px;" class="tr">₹ ${totalCgst.toFixed(2)}</td></tr>
-        <tr><td style="border:none;padding:2px 4px;">SGST</td><td style="border:none;padding:2px 4px;" class="tr">₹ ${totalSgst.toFixed(2)}</td></tr>
-        <tr><td style="border:none;padding:2px 4px;">Round off</td><td style="border:none;padding:2px 4px;" class="tr">₹ ${roundOff.toFixed(2)}</td></tr>
-        <tr class="bold"><td style="border:none;padding:2px 4px;">Total</td><td style="border:none;padding:2px 4px;" class="tr">₹ ${finalTotal}.00</td></tr>
-        <tr><td style="border:none;padding:2px 4px;">Received</td><td style="border:none;padding:2px 4px;" class="tr">₹ 0.00</td></tr>
-        <tr><td style="border:none;padding:2px 4px;color:red;"><b>Balance</b></td><td style="border:none;padding:2px 4px;color:red;" class="tr"><b>₹ ${finalTotal}.00</b></td></tr>
-      </table>
-    </td>
-  </tr></table>
-  <table style="margin-top:4px;">
-    <thead><tr>
-      <th>HSN/SAC</th><th>Taxable Amount</th>
-      <th>CGST Rate</th><th>CGST Amt</th>
-      <th>SGST Rate</th><th>SGST Amt</th>
-      <th>Total Tax</th>
-    </tr></thead>
-    <tbody>
-      ${itemRows.map(({item,gst,taxable,cgst,sgst}) => `
-        <tr>
-          <td>-</td>
-          <td class="tr">₹ ${taxable.toFixed(2)}</td>
-          <td class="tc">${gst/2}%</td>
-          <td class="tr">₹ ${cgst.toFixed(2)}</td>
-          <td class="tc">${gst/2}%</td>
-          <td class="tr">₹ ${sgst.toFixed(2)}</td>
-          <td class="tr">₹ ${(cgst+sgst).toFixed(2)}</td>
-        </tr>`).join('')}
-      <tr class="bold">
-        <td>Total</td>
-        <td class="tr">₹ ${totalTaxable.toFixed(2)}</td>
-        <td></td><td class="tr">₹ ${totalCgst.toFixed(2)}</td>
-        <td></td><td class="tr">₹ ${totalSgst.toFixed(2)}</td>
-        <td class="tr">₹ ${(totalCgst+totalSgst).toFixed(2)}</td>
-      </tr>
-    </tbody>
-  </table>
-  <table style="margin-top:4px;"><tr>
-    <td style="width:33%;vertical-align:top;padding:8px;">
-      <b>Bank Details</b><br>
-      Name: STATE BANK OF INDIA, HAYATNAGAR<br>
-      Account No.: 39550894944<br>
-      IFSC code: SBIN0011080<br>
-      Account Holder: P.V.R AGRO CHEMICALS
-    </td>
-    <td style="width:33%;vertical-align:top;padding:8px;">
-      <b>Terms and conditions</b><br>
-      Dealer should inform to the company within a week from date of invoice if any damage or short material received.
-    </td>
-    <td style="width:33%;vertical-align:top;padding:8px;text-align:right;">
-      <b>For: P.V.R AGROCHEMICALS</b><br><br><br><br>
-      <b>Authorized Signatory</b>
-    </td>
-  </tr></table>
-  <br>
-  <button onclick="window.print()" style="padding:8px 20px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ Print Invoice</button>
-  </body></html>`;
-
+  const invoiceHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Tax Invoice - ' + invoiceNo + '</title><style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#000;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:4px 6px;font-size:10px;}th{background:#f0f0f0;font-weight:bold;}.tr{text-align:right;}.tc{text-align:center;}.bold{font-weight:bold;}.title{text-align:center;font-size:14px;font-weight:bold;margin-bottom:8px;}@media print{button{display:none;}}</style></head><body>' +
+    '<div class="title">Tax Invoice</div>' +
+    '<table><tr><td style="width:50%;vertical-align:top;padding:8px;"><div style="display:flex;align-items:center;gap:8px;"><img src="' + LOGO_URL + '" style="width:50px;height:50px;object-fit:cover;border-radius:50%;" /><div><div style="font-size:15px;font-weight:bold;">P.V.R AGROCHEMICALS</div><div style="color:#cc0000;font-size:10px;">BLOCK NO 31 PLOT NO 45 DOOR NO 4-10-1246 AUTO NAGAR<br>RANGA REDDY DISTRICT</div><div>Phone: 9573711019 | Email: pvragrochem@gmail.com</div><div>GSTIN: 36AJRPR1684F1ZP | State: 36-Telangana</div></div></div></td>' +
+    '<td style="width:50%;vertical-align:top;padding:0;"><table style="width:100%;"><tr><td style="padding:4px;"><b>Invoice No.</b><br>' + invoiceNo + '</td><td style="padding:4px;"><b>Date</b><br>' + invoiceDate + '</td></tr><tr><td style="padding:4px;"><b>Place of Supply</b><br>36-Telangana</td><td style="padding:4px;"><b>Transport</b><br>' + (order.transport_name||'-') + '</td></tr><tr><td colspan="2" style="padding:4px;"><b>Delivery Location</b><br>' + (order.shipping_address||'-') + '</td></tr></table></td></tr></table>' +
+    '<table style="margin-top:4px;"><tr><td style="width:50%;padding:8px;"><b>Bill To</b><br><b>' + (customer?.name||'-') + '</b><br>' + (customer?.address||'') + '<br>Contact: ' + (customer?.phone||'') + (customer?.gst_number?'<br>GSTIN: '+customer.gst_number:'') + '<br>State: 36-Telangana</td><td style="width:50%;padding:8px;"><b>Ship To</b><br>' + (order.shipping_address||'-') + '</td></tr></table>' +
+    '<table style="margin-top:4px;"><thead><tr><th class="tc">#</th><th>Item Name</th><th>HSN/SAC</th><th class="tc">Batch</th><th class="tc">Exp.Date</th><th class="tc">Mfg.Date</th><th class="tc">Size</th><th class="tc">Qty</th><th class="tc">Unit</th><th class="tr">Price/Unit</th><th class="tc">GST%</th><th class="tr">Amount</th></tr></thead><tbody>' +
+    itemRows.map(function(r,idx){ return '<tr><td class="tc">'+(idx+1)+'</td><td>'+(r.item.products?.name||'-')+'</td><td class="tc">-</td><td class="tc">'+(batchNo||'-')+'</td><td class="tc">'+(expDate||'-')+'</td><td class="tc">'+(mfgDate||'-')+'</td><td class="tc">'+(r.item.product_variants?.bag_size||'-')+'</td><td class="tc">'+r.item.quantity+'</td><td class="tc">Pcs</td><td class="tr">₹ '+r.item.unit_price+'</td><td class="tc">'+r.gst+'%</td><td class="tr">₹ '+r.item.total_price.toFixed(2)+'</td></tr>'; }).join('') +
+    '<tr class="bold"><td colspan="7">Total</td><td class="tc">' + items.reduce(function(s,i){return s+i.quantity;},0) + '</td><td colspan="3"></td><td class="tr">₹ ' + totalTaxable.toFixed(2) + '</td></tr></tbody></table>' +
+    '<table style="margin-top:4px;"><tr><td style="width:50%;padding:8px;"><b>Invoice Amount In Words</b><br>' + numberToWords(finalTotal) + ' Rupees only</td><td style="width:50%;padding:0;"><table style="width:100%;border:none;"><tr><td style="border:none;padding:2px 6px;">Sub Total</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalTaxable.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">CGST</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalCgst.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">SGST</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalSgst.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">Round off</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + roundOff.toFixed(2) + '</td></tr><tr class="bold"><td style="border:none;padding:2px 6px;">Total</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + finalTotal + '.00</td></tr><tr><td style="border:none;padding:2px 6px;color:red;"><b>Balance</b></td><td style="border:none;padding:2px 6px;color:red;" class="tr"><b>₹ ' + finalTotal + '.00</b></td></tr></table></td></tr></table>' +
+    '<table style="margin-top:4px;"><thead><tr><th>HSN/SAC</th><th>Taxable Amt</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>' +
+    itemRows.map(function(r){ return '<tr><td>-</td><td class="tr">₹ '+r.taxable.toFixed(2)+'</td><td class="tc">'+(r.gst/2)+'%</td><td class="tr">₹ '+r.cgst.toFixed(2)+'</td><td class="tc">'+(r.gst/2)+'%</td><td class="tr">₹ '+r.sgst.toFixed(2)+'</td><td class="tr">₹ '+(r.cgst+r.sgst).toFixed(2)+'</td></tr>'; }).join('') +
+    '<tr class="bold"><td>Total</td><td class="tr">₹ '+totalTaxable.toFixed(2)+'</td><td></td><td class="tr">₹ '+totalCgst.toFixed(2)+'</td><td></td><td class="tr">₹ '+totalSgst.toFixed(2)+'</td><td class="tr">₹ '+(totalCgst+totalSgst).toFixed(2)+'</td></tr></tbody></table>' +
+    '<table style="margin-top:4px;"><tr><td style="width:33%;padding:8px;"><b>Bank Details</b><br>Name: STATE BANK OF INDIA, HAYATNAGAR<br>Account No.: 39550894944<br>IFSC: SBIN0011080<br>Account Holder: P.V.R AGRO CHEMICALS</td><td style="width:33%;padding:8px;"><b>Terms and conditions</b><br>Dealer should inform to the company within a week from date of invoice if any damage or short material received.</td><td style="width:33%;padding:8px;text-align:right;"><b>For: P.V.R AGROCHEMICALS</b><br><br><br><br><b>Authorized Signatory</b></td></tr></table>' +
+    '<br><button onclick="window.print()" style="padding:8px 20px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ Print Invoice</button></body></html>';
   const win = window.open('', '_blank');
   win.document.write(invoiceHTML);
   win.document.close();
@@ -844,18 +763,13 @@ async function generateInvoice(orderId) {
 function numberToWords(num) {
   const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
   const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-  if(num===0)return'Zero';
-  if(num<20)return ones[num];
-  if(num<100)return tens[Math.floor(num/10)]+(num%10?' '+ones[num%10]:'');
+  if(num===0)return'Zero';if(num<20)return ones[num];if(num<100)return tens[Math.floor(num/10)]+(num%10?' '+ones[num%10]:'');
   if(num<1000)return ones[Math.floor(num/100)]+' Hundred'+(num%100?' '+numberToWords(num%100):'');
   if(num<100000)return numberToWords(Math.floor(num/1000))+' Thousand'+(num%1000?' '+numberToWords(num%1000):'');
   if(num<10000000)return numberToWords(Math.floor(num/100000))+' Lakh'+(num%100000?' '+numberToWords(num%100000):'');
   return numberToWords(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+numberToWords(num%10000000):'');
 }
 
-// ============================================
-// CREDIT
-// ============================================
 async function toggleCreditDetail(customerId) {
   const panel = document.getElementById('credit_detail_' + customerId);
   if (!panel) return;
@@ -891,54 +805,10 @@ async function refreshCreditDetail(customerId) {
   const totalDebit = rows.filter(r=>r.isDebit).reduce((s,r)=>s+r.amount,0);
   const totalCredit = rows.filter(r=>!r.isDebit).reduce((s,r)=>s+r.amount,0);
   const closingBalance = rows.length > 0 ? rows[rows.length-1].runningBalance : 0;
-  panel.innerHTML = `
-    <div class="border-t pt-4">
-      <div class="font-bold text-gray-700 mb-3">📄 Party Statement (${rows.length} entries)</div>
-      <div class="overflow-x-auto rounded-xl border border-gray-200">
-        <table class="w-full text-xs border-collapse">
-          <thead>
-            <tr class="bg-green-700 text-white">
-              <th class="px-2 py-2 text-left">Date</th>
-              <th class="px-2 py-2 text-left">Description</th>
-              <th class="px-2 py-2 text-left">Ref</th>
-              <th class="px-2 py-2 text-right text-red-200">Debit</th>
-              <th class="px-2 py-2 text-right text-green-200">Credit</th>
-              <th class="px-2 py-2 text-right">Balance</th>
-              <th class="px-2 py-2 text-center">Edit</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rows.length===0 ? '<tr><td colspan="7" class="text-center py-6 text-gray-400">No entries yet</td></tr>' :
-            rows.map((row,i)=>`
-              <tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b border-gray-100">
-                <td class="px-2 py-2 text-gray-500 whitespace-nowrap">${row.date}</td>
-                <td class="px-2 py-2 text-gray-700" style="max-width:160px;word-break:break-word;">${row.description}</td>
-                <td class="px-2 py-2 text-blue-500 font-mono">${row.ref}</td>
-                <td class="px-2 py-2 text-right font-semibold ${row.isDebit?'text-red-600':'text-gray-300'}">${row.isDebit?row.amount.toLocaleString('en-IN'):'—'}</td>
-                <td class="px-2 py-2 text-right font-semibold ${!row.isDebit?'text-green-600':'text-gray-300'}">${!row.isDebit?row.amount.toLocaleString('en-IN'):'—'}</td>
-                <td class="px-2 py-2 text-right font-bold whitespace-nowrap ${row.runningBalance>0?'text-red-500':'text-green-600'}">
-                  ${Math.abs(row.runningBalance).toLocaleString('en-IN')} <span class="text-gray-400 font-normal">${row.runningBalance>0?'Dr':'Cr'}</span>
-                </td>
-                <td class="px-2 py-2 text-center whitespace-nowrap">
-                  <button onclick="editLedgerEntry('${row.entryId}','${customerId}',${row.amount},'${row.safeNote}')" class="text-blue-400 mr-1">✏️</button>
-                  <button onclick="deleteLedgerEntry('${row.entryId}','${customerId}')" class="text-red-400">🗑</button>
-                </td>
-              </tr>`).join('')}
-          </tbody>
-          <tfoot>
-            <tr class="bg-gray-800 text-white font-bold text-xs">
-              <td colspan="3" class="px-2 py-2">Closing Balance</td>
-              <td class="px-2 py-2 text-right text-red-300">${totalDebit.toLocaleString('en-IN')}</td>
-              <td class="px-2 py-2 text-right text-green-300">${totalCredit.toLocaleString('en-IN')}</td>
-              <td class="px-2 py-2 text-right ${closingBalance>0?'text-red-300':'text-green-300'}">
-                ${Math.abs(closingBalance).toLocaleString('en-IN')} <span class="font-normal">${closingBalance>0?'Dr':'Cr'}</span>
-              </td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>`;
+  panel.innerHTML = '<div class="border-t pt-4"><div class="font-bold text-gray-700 mb-3">📄 Party Statement (' + rows.length + ' entries)</div><div class="overflow-x-auto rounded-xl border border-gray-200"><table class="w-full text-xs border-collapse"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Description</th><th class="px-2 py-2 text-left">Ref</th><th class="px-2 py-2 text-right text-red-200">Debit</th><th class="px-2 py-2 text-right text-green-200">Credit</th><th class="px-2 py-2 text-right">Balance</th><th class="px-2 py-2 text-center">Edit</th></tr></thead><tbody>' +
+    (rows.length===0 ? '<tr><td colspan="7" class="text-center py-6 text-gray-400">No entries yet</td></tr>' :
+    rows.map(function(row,i){ return '<tr class="'+(i%2===0?'bg-white':'bg-gray-50')+' border-b border-gray-100"><td class="px-2 py-2 text-gray-500 whitespace-nowrap">'+row.date+'</td><td class="px-2 py-2 text-gray-700" style="max-width:160px;word-break:break-word;">'+row.description+'</td><td class="px-2 py-2 text-blue-500 font-mono">'+row.ref+'</td><td class="px-2 py-2 text-right font-semibold '+(row.isDebit?'text-red-600':'text-gray-300')+'">'+(row.isDebit?row.amount.toLocaleString('en-IN'):'—')+'</td><td class="px-2 py-2 text-right font-semibold '+(!row.isDebit?'text-green-600':'text-gray-300')+'">'+(!row.isDebit?row.amount.toLocaleString('en-IN'):'—')+'</td><td class="px-2 py-2 text-right font-bold whitespace-nowrap '+(row.runningBalance>0?'text-red-500':'text-green-600')+'">'+Math.abs(row.runningBalance).toLocaleString('en-IN')+' <span class="text-gray-400 font-normal">'+(row.runningBalance>0?'Dr':'Cr')+'</span></td><td class="px-2 py-2 text-center whitespace-nowrap"><button onclick="editLedgerEntry(\''+row.entryId+'\',\''+customerId+'\','+row.amount+',\''+row.safeNote+'\')" class="text-blue-400 mr-1">✏️</button><button onclick="deleteLedgerEntry(\''+row.entryId+'\',\''+customerId+'\')" class="text-red-400">🗑</button></td></tr>'; }).join('')) +
+    '</tbody><tfoot><tr class="bg-gray-800 text-white font-bold text-xs"><td colspan="3" class="px-2 py-2">Closing Balance</td><td class="px-2 py-2 text-right text-red-300">'+totalDebit.toLocaleString('en-IN')+'</td><td class="px-2 py-2 text-right text-green-300">'+totalCredit.toLocaleString('en-IN')+'</td><td class="px-2 py-2 text-right '+(closingBalance>0?'text-red-300':'text-green-300')+'">'+Math.abs(closingBalance).toLocaleString('en-IN')+' <span class="font-normal">'+(closingBalance>0?'Dr':'Cr')+'</span></td><td></td></tr></tfoot></table></div></div>';
 }
 
 async function refreshCreditSummaryCard(customerId) {
@@ -947,39 +817,34 @@ async function refreshCreditSummaryCard(customerId) {
   const c = credits[0];
   const card = document.getElementById('credit_card_' + customerId);
   if (!card) return;
-  card.querySelector('.text-right').innerHTML = `
-    <div class="text-xs text-gray-400">Total Billed: ₹${c.total_owed}</div>
-    <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
-    <div class="font-bold text-lg ${c.balance>0?'text-red-500':'text-green-600'}">
-      ${c.balance>0?'Outstanding: ₹'+c.balance:'Settled ✅'}
-    </div>`;
+  card.querySelector('.text-right').innerHTML = '<div class="text-xs text-gray-400">Total Billed: ₹'+c.total_owed+'</div><div class="text-xs text-green-600">Total Paid: ₹'+c.total_paid+'</div><div class="font-bold text-lg '+(c.balance>0?'text-red-500':'text-green-600')+'">'+(c.balance>0?'Outstanding: ₹'+c.balance:'Settled ✅')+'</div>';
 }
 
 async function recordPayment(customerId, customerName, balance) {
-  const amount = prompt(`Record payment for ${customerName}\nCurrent balance: ₹${balance}\n\nEnter amount paid:`);
+  const amount = prompt('Record payment for ' + customerName + '\nCurrent balance: ₹' + balance + '\n\nEnter amount paid:');
   if (!amount || isNaN(amount)) return;
-  const note = prompt('Add a note (optional, e.g. "Cash", "UPI ref #123"):') || 'Payment received';
+  const note = prompt('Add a note (optional):') || 'Payment received';
   await db.from('credit_ledger').insert({ customer_id: customerId, amount: parseFloat(amount), type: 'credit', note });
-  alert(`Payment of ₹${amount} recorded! ✅`);
+  alert('Payment of ₹' + amount + ' recorded! ✅');
   await refreshCreditSummaryCard(customerId);
   await refreshCreditDetail(customerId);
 }
 
 async function addManualEntry(customerId, customerName) {
-  const amount = prompt(`Add manual debit for ${customerName}\n\nEnter amount:`);
+  const amount = prompt('Add manual debit for ' + customerName + '\n\nEnter amount:');
   if (!amount || isNaN(amount)) return;
   const note = prompt('Note for this entry:') || 'Manual debit entry';
   await db.from('credit_ledger').insert({ customer_id: customerId, amount: parseFloat(amount), type: 'debit', note });
-  alert(`Manual debit of ₹${amount} added! ✅`);
+  alert('Manual debit of ₹' + amount + ' added! ✅');
   await refreshCreditSummaryCard(customerId);
   const panel = document.getElementById('credit_detail_' + customerId);
   if (panel && !panel.classList.contains('hidden')) await refreshCreditDetail(customerId);
 }
 
 async function editLedgerEntry(entryId, customerId, currentAmount, currentNote) {
-  const amount = prompt(`Edit amount:\nCurrent: ₹${currentAmount}`, currentAmount);
+  const amount = prompt('Edit amount:\nCurrent: ₹' + currentAmount, currentAmount);
   if (!amount || isNaN(amount)) return;
-  const note = prompt(`Edit note:\nCurrent: ${currentNote}`, currentNote);
+  const note = prompt('Edit note:\nCurrent: ' + currentNote, currentNote);
   if (note === null) return;
   await db.from('credit_ledger').update({ amount: parseFloat(amount), note }).eq('id', entryId);
   alert('Entry updated! ✅');
@@ -995,9 +860,6 @@ async function deleteLedgerEntry(entryId, customerId) {
   await refreshCreditDetail(customerId);
 }
 
-// ============================================
-// PLACE ORDER
-// ============================================
 function updateQty(index, delta) {
   state.cart[index].qty += delta;
   if (state.cart[index].qty <= 0) state.cart.splice(index, 1);
@@ -1036,7 +898,7 @@ async function placeOrder() {
       note: payment === 'cash' ? 'Cash order' : 'Credit order',
     });
     state.cart = []; saveCart();
-    alert(`Order placed! 🌿\nOrder ID: ${order.id.substring(0,8).toUpperCase()}\nTrack with: ${phone}`);
+    alert('Order placed! 🌿\nOrder ID: ' + order.id.substring(0,8).toUpperCase() + '\nTrack with: ' + phone);
     state.products = []; navigate('home');
   } catch (err) { alert('Error placing order. Please try again.'); console.error(err); }
 }
@@ -1052,16 +914,7 @@ async function trackOrder() {
     return;
   }
   const { data: orders } = await db.from('orders').select('*').eq('customer_id', customers[0].id).order('created_at', { ascending: false });
-  results.innerHTML = (orders||[]).map(o => `
-    <div class="border rounded-lg p-3 mb-2">
-      <div class="flex justify-between">
-        <div class="font-bold text-sm">Order #${o.id.substring(0,8).toUpperCase()}</div>
-        <div class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">${o.order_status}</div>
-      </div>
-      <div class="text-xs text-gray-500">${new Date(o.created_at).toLocaleString()}</div>
-      <div class="text-green-700 font-bold">₹${o.total_amount}</div>
-      <div class="text-xs text-gray-400">${o.payment_method}</div>
-    </div>`).join('');
+  results.innerHTML = (orders||[]).map(o => '<div class="border rounded-lg p-3 mb-2"><div class="flex justify-between"><div class="font-bold text-sm">Order #'+o.id.substring(0,8).toUpperCase()+'</div><div class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">'+o.order_status+'</div></div><div class="text-xs text-gray-500">'+new Date(o.created_at).toLocaleString()+'</div><div class="text-green-700 font-bold">₹'+o.total_amount+'</div><div class="text-xs text-gray-400">'+o.payment_method+'</div></div>').join('');
 }
 
 function adminLogin() {
@@ -1071,67 +924,17 @@ function adminLogin() {
 }
 function adminLogout() { state.adminLoggedIn = false; navigate('home'); }
 
-// ============================================
-// PRODUCT ADMIN - ADD
-// ============================================
 function showAddProduct() {
   const form = document.getElementById('add_product_form');
-  form.innerHTML = `
-    <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <h3 class="font-bold mb-3">Add New Product</h3>
-      <input id="np_name" placeholder="Product Name *" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <select id="np_category" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm">
-        <option>Bio-Pesticides</option><option>Pesticides</option><option>Fungicides</option>
-        <option>Seeds</option><option>Fertilizers</option><option>Herbicides</option><option>Weedicides</option>
-      </select>
-      <input id="np_desc" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="np_company" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="np_chemical" placeholder="Chemical Name (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="np_hsn" placeholder="HSN/SAC Code (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <div class="mb-3">
-        <label class="text-sm font-medium text-gray-700">Product Image (optional)</label>
-        <input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
-      </div>
-      <div class="font-semibold text-sm mb-2">Variants (Sizes)</div>
-      <div id="np_variants">
-        ${variantBlockHTML()}
-      </div>
-      <button onclick="addVariantBlock()" class="text-green-700 text-sm mb-3 block">+ Add Another Size</button>
-      <button onclick="saveNewProduct()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Save Product</button>
-    </div>`;
-}
-
-function variantBlockHTML() {
-  return `
-  <div class="variant-block border rounded-lg p-3 mb-3 bg-gray-50">
-    <input placeholder="Size (e.g. 1L, 500ml) *" class="variant_size w-full border rounded px-2 py-1 text-sm mb-2" />
-    <div class="font-semibold text-xs text-gray-500 mb-1">Packaging Options</div>
-    <div class="pkg-rows">
-      ${pkgRowHTML()}
-    </div>
-    <button type="button" onclick="addPkgRow(this)" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button>
-  </div>`;
-}
-
-function pkgRowHTML() {
-  return `
-  <div class="pkg-row grid grid-cols-2 gap-2 mb-2">
-    <input placeholder="Label (e.g. Box of 12) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" />
-    <input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" />
-    <input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" />
-    <input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" />
-    <input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" />
-    <input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" />
-  </div>`;
+  form.innerHTML = '<div class="bg-white rounded-xl shadow p-4 mb-4"><h3 class="font-bold mb-3">Add New Product</h3><input id="np_name" placeholder="Product Name *" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><select id="np_category" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm"><option>Bio-Pesticides</option><option>Pesticides</option><option>Fungicides</option><option>Seeds</option><option>Fertilizers</option><option>Herbicides</option><option>Weedicides</option></select><input id="np_desc" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="np_company" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="np_chemical" placeholder="Chemical Name (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="np_hsn" placeholder="HSN/SAC Code (optional)" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><div class="mb-3"><label class="text-sm font-medium text-gray-700">Product Image (optional)</label><input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" /></div><div class="font-semibold text-sm mb-2">Variants (Sizes)</div><div id="np_variants"><div class="variant-block border rounded-lg p-3 mb-3 bg-gray-50"><input placeholder="Size (e.g. 1L, 500ml) *" class="variant_size w-full border rounded px-2 py-1 text-sm mb-2" /><div class="font-semibold text-xs text-gray-500 mb-1">Packaging Options</div><div class="pkg-rows"><div class="pkg-row grid grid-cols-2 gap-2 mb-2"><input placeholder="Label (e.g. Box of 12) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" /><input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" /><input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" /><input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" /><input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" /><input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" /></div></div><button type="button" onclick="addPkgRow(this)" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button></div></div><button onclick="addVariantBlock()" class="text-green-700 text-sm mb-3 block">+ Add Another Size</button><button onclick="saveNewProduct()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Save Product</button></div>';
 }
 
 function addPkgRow(btn) {
-  const pkgRows = btn.previousElementSibling;
-  pkgRows.insertAdjacentHTML('beforeend', pkgRowHTML());
+  btn.previousElementSibling.insertAdjacentHTML('beforeend', '<div class="pkg-row grid grid-cols-2 gap-2 mb-2"><input placeholder="Label (e.g. Box of 24) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" /><input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" /><input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" /><input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" /><input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" /><input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" /></div>');
 }
 
 function addVariantBlock() {
-  document.getElementById('np_variants').insertAdjacentHTML('beforeend', variantBlockHTML());
+  document.getElementById('np_variants').insertAdjacentHTML('beforeend', '<div class="variant-block border rounded-lg p-3 mb-3 bg-gray-50"><input placeholder="Size (e.g. 500ml) *" class="variant_size w-full border rounded px-2 py-1 text-sm mb-2" /><div class="font-semibold text-xs text-gray-500 mb-1">Packaging Options</div><div class="pkg-rows"><div class="pkg-row grid grid-cols-2 gap-2 mb-2"><input placeholder="Label (e.g. Box of 12) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" /><input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" /><input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" /><input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" /><input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" /><input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" /></div></div><button type="button" onclick="addPkgRow(this)" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button></div>');
 }
 
 async function saveNewProduct() {
@@ -1140,47 +943,39 @@ async function saveNewProduct() {
   const desc = document.getElementById('np_desc').value.trim();
   const hsn = document.getElementById('np_hsn').value.trim();
   if (!name) { alert('Product name is required!'); return; }
-
   let image_url = null;
   const imageFile = document.getElementById('np_image').files[0];
   if (imageFile) {
     const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    const fileName = Date.now() + '.' + fileExt;
     const { data: uploadData } = await db.storage.from('product-images').upload(fileName, imageFile);
     if (uploadData) {
       const { data: urlData } = db.storage.from('product-images').getPublicUrl(fileName);
       image_url = urlData.publicUrl;
     }
   }
-
   const { data: product, error: productError } = await db.from('products').insert({
     name, category, description: desc,
     company_name: document.getElementById('np_company').value.trim(),
     chemical_name: document.getElementById('np_chemical').value.trim(),
     hsn_code: hsn, image_url, is_available: true
   }).select().single();
-
   if (productError) { alert('Error saving product: ' + productError.message); return; }
-
   const variantBlocks = document.querySelectorAll('.variant-block');
   for (const block of variantBlocks) {
     const size = block.querySelector('.variant_size').value.trim();
     if (!size) continue;
-
     const { data: variant, error: variantError } = await db.from('product_variants').insert({
       product_id: product.id, bag_size: size, price: 0, stock_quantity: 0
     }).select().single();
-
     if (variantError) { console.error('Variant error:', variantError); continue; }
-
     const pkgRows = block.querySelectorAll('.pkg-row');
     for (const row of pkgRows) {
       const label = row.querySelector('.pkg_label')?.value.trim();
       const price = row.querySelector('.pkg_price')?.value;
       if (!label || !price) continue;
       const { error: pkgError } = await db.from('product_packagings').insert({
-        variant_id: variant.id,
-        box_label: label,
+        variant_id: variant.id, box_label: label,
         units_per_box: parseInt(row.querySelector('.pkg_units')?.value) || 1,
         mrp_per_unit: parseFloat(row.querySelector('.pkg_mrp')?.value) || null,
         price_per_unit: parseFloat(row.querySelector('.pkg_price_unit')?.value) || null,
@@ -1194,73 +989,29 @@ async function saveNewProduct() {
   showAdminTab('products');
 }
 
-// ============================================
-// PRODUCT ADMIN - EDIT
-// ============================================
 function editProduct(productId) {
   const product = state.adminProducts?.find(p => p.id === productId);
   if (!product) return;
   const form = document.getElementById('add_product_form');
-  form.innerHTML = `
-    <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <h3 class="font-bold mb-3">Edit Product: ${product.name}</h3>
-      <input id="ep_name" value="${product.name}" placeholder="Product Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <select id="ep_category" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm">
-        ${['Bio-Pesticides','Pesticides','Fungicides','Seeds','Fertilizers','Herbicides','Weedicides'].map(c=>`<option ${product.category===c?'selected':''}>${c}</option>`).join('')}
-      </select>
-      <input id="ep_company" value="${product.company_name||''}" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="ep_chemical" value="${product.chemical_name||''}" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="ep_desc" value="${product.description||''}" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <input id="ep_hsn" value="${product.hsn_code||''}" placeholder="HSN/SAC Code" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" />
-      <div class="mb-3">
-        <label class="text-sm font-medium text-gray-700">Change Image (only if replacing)</label>
-        <input id="ep_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" />
-      </div>
-      <div class="font-semibold text-sm mb-2">Variants & Packaging</div>
-      ${(product.product_variants||[]).map(v => `
-        <div class="border rounded-lg p-3 mb-3 bg-gray-50">
-          <div class="font-medium text-sm mb-2 text-gray-700">📦 ${v.bag_size}</div>
-          <div class="font-semibold text-xs text-gray-500 mb-2">Existing Packaging</div>
-          ${(v.packagings||[]).map(pk => `
-            <div class="border rounded-lg p-2 mb-2 bg-white" id="pkg_row_${pk.id}">
-              <div class="grid grid-cols-2 gap-2 mb-1">
-                <input id="pk_label_${pk.id}" value="${pk.box_label}" placeholder="Label" class="border rounded px-2 py-1 text-xs col-span-2" />
-                <input id="pk_units_${pk.id}" type="number" value="${pk.units_per_box}" placeholder="Units/box" class="border rounded px-2 py-1 text-xs" />
-                <input id="pk_mrp_${pk.id}" type="number" value="${pk.mrp_per_unit||''}" placeholder="MRP/unit" class="border rounded px-2 py-1 text-xs" />
-                <input id="pk_price_unit_${pk.id}" type="number" value="${pk.price_per_unit||''}" placeholder="Price/unit" class="border rounded px-2 py-1 text-xs" />
-                <input id="pk_price_${pk.id}" type="number" value="${pk.price_per_box}" placeholder="Price/box" class="border rounded px-2 py-1 text-xs" />
-                <input id="pk_stock_${pk.id}" type="number" value="${pk.stock_quantity}" placeholder="Stock" class="border rounded px-2 py-1 text-xs col-span-2" />
-              </div>
-              <button onclick="deletePkg('${pk.id}','${v.id}')" class="text-red-400 text-xs">🗑 Delete this packaging</button>
-            </div>`).join('')}
-          <div id="new_pkgs_${v.id}" class="space-y-2"></div>
-          <button onclick="addNewPkgRow('${v.id}')" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button>
-        </div>`).join('')}
-      <button onclick="saveEditProduct('${product.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2">Save Changes</button>
-    </div>`;
+  form.innerHTML = '<div class="bg-white rounded-xl shadow p-4 mb-4"><h3 class="font-bold mb-3">Edit: ' + product.name + '</h3><input id="ep_name" value="' + product.name + '" placeholder="Product Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><select id="ep_category" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm">' +
+    ['Bio-Pesticides','Pesticides','Fungicides','Seeds','Fertilizers','Herbicides','Weedicides'].map(c=>'<option '+(product.category===c?'selected':'')+'>'+c+'</option>').join('') +
+    '</select><input id="ep_company" value="' + (product.company_name||'') + '" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_chemical" value="' + (product.chemical_name||'') + '" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_desc" value="' + (product.description||'') + '" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_hsn" value="' + (product.hsn_code||'') + '" placeholder="HSN/SAC Code" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><div class="mb-3"><label class="text-sm font-medium text-gray-700">Change Image (only if replacing)</label><input id="ep_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" /></div><div class="font-semibold text-sm mb-2">Variants & Packaging</div>' +
+    (product.product_variants||[]).map(v => '<div class="border rounded-lg p-3 mb-3 bg-gray-50"><div class="font-medium text-sm mb-2 text-gray-700">📦 ' + v.bag_size + '</div>' +
+      (v.packagings||[]).map(pk => '<div class="border rounded-lg p-2 mb-2 bg-white" id="pkg_row_' + pk.id + '"><div class="grid grid-cols-2 gap-2 mb-1"><input id="pk_label_' + pk.id + '" value="' + pk.box_label + '" placeholder="Label" class="border rounded px-2 py-1 text-xs col-span-2" /><input id="pk_units_' + pk.id + '" type="number" value="' + pk.units_per_box + '" placeholder="Units/box" class="border rounded px-2 py-1 text-xs" /><input id="pk_mrp_' + pk.id + '" type="number" value="' + (pk.mrp_per_unit||'') + '" placeholder="MRP/unit" class="border rounded px-2 py-1 text-xs" /><input id="pk_price_unit_' + pk.id + '" type="number" value="' + (pk.price_per_unit||'') + '" placeholder="Price/unit" class="border rounded px-2 py-1 text-xs" /><input id="pk_price_' + pk.id + '" type="number" value="' + pk.price_per_box + '" placeholder="Price/box" class="border rounded px-2 py-1 text-xs" /><input id="pk_stock_' + pk.id + '" type="number" value="' + pk.stock_quantity + '" placeholder="Stock" class="border rounded px-2 py-1 text-xs col-span-2" /></div><button onclick="deletePkg(\'' + pk.id + '\')" class="text-red-400 text-xs">🗑 Delete</button></div>').join('') +
+      '<div id="new_pkgs_' + v.id + '"></div><button onclick="addNewPkgRow(\'' + v.id + '\')" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button></div>'
+    ).join('') +
+    '<button onclick="saveEditProduct(\'' + product.id + '\')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold mt-2">Save Changes</button></div>';
 }
 
 function addNewPkgRow(variantId) {
-  const container = document.getElementById('new_pkgs_' + variantId);
-  container.insertAdjacentHTML('beforeend', `
-    <div class="border rounded-lg p-2 bg-white new-pkg-row">
-      <div class="grid grid-cols-2 gap-2">
-        <input placeholder="Label (e.g. Box of 12) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" />
-        <input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" />
-        <input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" />
-        <input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" />
-        <input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" />
-        <input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" />
-      </div>
-    </div>`);
+  document.getElementById('new_pkgs_' + variantId).insertAdjacentHTML('beforeend', '<div class="border rounded-lg p-2 bg-white new-pkg-row mb-2"><div class="grid grid-cols-2 gap-2"><input placeholder="Label *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" /><input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" /><input placeholder="MRP/unit" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" /><input placeholder="Price/unit" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" /><input placeholder="Price/box *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" /><input placeholder="Stock" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" /></div></div>');
 }
 
-async function deletePkg(pkgId, variantId) {
+async function deletePkg(pkgId) {
   if (!confirm('Delete this packaging option?')) return;
   await db.from('product_packagings').delete().eq('id', pkgId);
   const row = document.getElementById('pkg_row_' + pkgId);
   if (row) row.remove();
-  alert('Packaging deleted!');
 }
 
 async function saveEditProduct(productId) {
@@ -1272,47 +1023,37 @@ async function saveEditProduct(productId) {
     description: document.getElementById('ep_desc').value.trim(),
     hsn_code: document.getElementById('ep_hsn').value.trim(),
   };
-
   const imageFile = document.getElementById('ep_image').files[0];
   if (imageFile) {
     const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
+    const fileName = Date.now() + '.' + fileExt;
     const { data: uploadData } = await db.storage.from('product-images').upload(fileName, imageFile);
     if (uploadData) {
       const { data: urlData } = db.storage.from('product-images').getPublicUrl(fileName);
       updateData.image_url = urlData.publicUrl;
     }
   }
-
   await db.from('products').update(updateData).eq('id', productId);
-
   const product = state.adminProducts?.find(p => p.id === productId);
   for (const v of (product?.product_variants || [])) {
     for (const pk of (v.packagings || [])) {
-      const label = document.getElementById('pk_label_' + pk.id)?.value;
-      const units = document.getElementById('pk_units_' + pk.id)?.value;
-      const mrp = document.getElementById('pk_mrp_' + pk.id)?.value;
-      const priceUnit = document.getElementById('pk_price_unit_' + pk.id)?.value;
       const price = document.getElementById('pk_price_' + pk.id)?.value;
-      const stock = document.getElementById('pk_stock_' + pk.id)?.value;
       if (price) await db.from('product_packagings').update({
-        box_label: label,
-        units_per_box: parseInt(units) || 1,
-        mrp_per_unit: parseFloat(mrp) || null,
-        price_per_unit: parseFloat(priceUnit) || null,
+        box_label: document.getElementById('pk_label_' + pk.id)?.value,
+        units_per_box: parseInt(document.getElementById('pk_units_' + pk.id)?.value) || 1,
+        mrp_per_unit: parseFloat(document.getElementById('pk_mrp_' + pk.id)?.value) || null,
+        price_per_unit: parseFloat(document.getElementById('pk_price_unit_' + pk.id)?.value) || null,
         price_per_box: parseFloat(price),
-        stock_quantity: parseInt(stock) || 0,
+        stock_quantity: parseInt(document.getElementById('pk_stock_' + pk.id)?.value) || 0,
       }).eq('id', pk.id);
     }
-    // Save new packaging rows
-    const newPkgRows = document.querySelectorAll(`#new_pkgs_${v.id} .new-pkg-row`);
+    const newPkgRows = document.querySelectorAll('#new_pkgs_' + v.id + ' .new-pkg-row');
     for (const row of newPkgRows) {
       const label = row.querySelector('.pkg_label')?.value.trim();
       const price = row.querySelector('.pkg_price')?.value;
       if (!label || !price) continue;
       await db.from('product_packagings').insert({
-        variant_id: v.id,
-        box_label: label,
+        variant_id: v.id, box_label: label,
         units_per_box: parseInt(row.querySelector('.pkg_units')?.value) || 1,
         mrp_per_unit: parseFloat(row.querySelector('.pkg_mrp')?.value) || null,
         price_per_unit: parseFloat(row.querySelector('.pkg_price_unit')?.value) || null,
@@ -1343,3 +1084,4 @@ render();
 </script>
 </body>
 </html>
+ENDOFFILE
