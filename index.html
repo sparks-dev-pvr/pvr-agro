@@ -1099,7 +1099,8 @@ function filterAdminProducts() {
   const cards = document.querySelectorAll('.admin-product-card');
   cards.forEach(card => {
     const name = card.dataset.name || '';
-    card.style.display = name.includes(search) ? 'block' : 'none';
+    const company = card.dataset.company || '';
+    card.style.display = (name.includes(search) || company.includes(search)) ? 'block' : 'none';
   });
 }
 function navigate(page) { state.page = page; render(); }
