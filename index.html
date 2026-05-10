@@ -179,7 +179,7 @@ function renderHome() {
         class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
     </div>
     <div class="mb-6">
-      <select onchange="state.category=this.value; render();"
+      <select onchange="state.category=this.value; renderProductGrid();"
         class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500 bg-white text-gray-700 font-medium">
         ${categories.map(c => `<option value="${c}" ${state.category === c ? 'selected' : ''}>${c === 'all' ? '🌾 All Products' : getCategoryStyle(c).icon + ' ' + c}</option>`).join('')}
       </select>
