@@ -503,6 +503,7 @@ async function showAdminTab(tab) {
               </div>
               <div class="flex items-center gap-2">
                 <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600">✏️ Edit</button>
+                <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs ${p.is_available ? 'text-orange-400 hover:text-orange-600' : 'text-green-500 hover:text-green-700'}">${p.is_available ? '🚫 Mark Unavailable' : '✅ Mark Available'}</button>
                 <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
               </div>
             </div>
@@ -1035,7 +1036,13 @@ async function saveEditProduct(productId) {
   showAdminTab('products');
 }
 
-async function deleteProduct(productId) {
+async function toggleProductAvailability(productId, currentStatus) {
+  const newStatus = !currentStatus;
+  await db.from('products').update({ is_available: newStatus }).eq('id', productId);
+  alert(newStatus ? 'Product marked as Available ✅' : 'Product marked as Unavailable 🚫');
+  showAdminTab('products');
+}
+  async function deleteProduct(productId) {
   if (!confirm('Delete this product?')) return;
   const { data: variants } = await db.from('product_variants').select('id').eq('product_id', productId);
   if (variants) for (const v of variants) await db.from('product_packagings').delete().eq('variant_id', v.id);
