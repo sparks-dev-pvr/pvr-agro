@@ -497,7 +497,7 @@ async function showAdminTab(tab) {
         ${state.adminProducts.map(p => {
           const s = getCategoryStyle(p.category);
           return `
-          <div class="bg-white rounded-xl shadow p-4 admin-product-card" data-name="${p.name.toLowerCase()}">
+          <div class="bg-white rounded-xl shadow p-4 admin-product-card" data-name="${p.name.toLowerCase()}" data-company="${(p.company_name||'').toLowerCase()}">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-3">
                 ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl">${s.icon}</div>`}
