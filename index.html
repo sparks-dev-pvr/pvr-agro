@@ -78,18 +78,7 @@ function installApp() {
 
 // Service Worker
 if ('serviceWorker' in navigator) {
-  const swCode = `
-    const CACHE = 'pvr-agro-v1';
-    self.addEventListener('install', e => { self.skipWaiting(); });
-    self.addEventListener('activate', e => { self.clients.claim(); });
-    self.addEventListener('fetch', e => {
-      if (e.request.method !== 'GET') return;
-      if (e.request.url.includes('supabase.co')) return;
-      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    });
-  `;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(console.error);
+  navigator.serviceWorker.register('/sw.js').catch(console.error);
 }
 
 // STATE
