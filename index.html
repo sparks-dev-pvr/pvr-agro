@@ -173,9 +173,9 @@ function renderHome() {
     <div class="flex gap-2 mb-4">
       <input id="searchInput" type="text" placeholder="Search products..." value="${state.search}"
         class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500" />
-      <button onclick="state.search=document.getElementById('searchInput').value; render();"
+      <button onclick="state.search=document.getElementById('searchInput').value; renderProductGrid();"
         class="bg-green-700 text-white px-4 py-2 rounded-lg font-medium">Search</button>
-      <button onclick="state.search=''; state.products=[]; render();"
+      <button onclick="state.search=''; renderProductGrid();"
         class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
     </div>
     <div class="mb-6">
