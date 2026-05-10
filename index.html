@@ -1094,6 +1094,14 @@ async function deleteOrder(orderId) {
   alert('Order deleted! 🗑');
   renderOrdersTab('pending');
 }
+function filterAdminProducts() {
+  const search = document.getElementById('product_search')?.value.toLowerCase() || '';
+  const cards = document.querySelectorAll('.admin-product-card');
+  cards.forEach(card => {
+    const name = card.dataset.name || '';
+    card.style.display = name.includes(search) ? 'block' : 'none';
+  });
+}
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 
