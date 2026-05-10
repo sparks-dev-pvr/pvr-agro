@@ -855,6 +855,7 @@ async function placeOrder() {
     await db.from('order_items').insert(state.cart.map(i => ({
       order_id: order.id, product_id: i.productId, variant_id: i.variantId,
       quantity: i.qty, unit_price: i.pricePerBox, total_price: i.pricePerBox * i.qty,
+      product_name: i.name, variant_name: i.size,
     })));
     for (const item of state.cart) {
       const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', item.pkgId).single();
