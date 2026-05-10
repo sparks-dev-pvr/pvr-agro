@@ -487,6 +487,11 @@ async function showAdminTab(tab) {
         <h2 class="text-xl font-bold">Products</h2>
         <button onclick="showAddProduct()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Product</button>
       </div>
+      <div class="flex gap-2 mb-4">
+        <input id="product_search" type="text" placeholder="Search products..."
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+          oninput="filterAdminProducts()" />
+      </div>
       <div id="add_product_form"></div>
       <div class="space-y-3">
         ${state.adminProducts.map(p => {
