@@ -1065,14 +1065,22 @@ function renderProductGrid() {
   });
   const grid = document.getElementById('product_grid');
   if (!grid) return;
-  grid.innerHTML = filtered.map(p => {
-    const firstVariant = p.variants && p.variants[0];
-    const firstPkg = firstVariant && firstVariant.packagings && firstVariant.packagings[0];
-    return `<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition" onclick="state.selectedProduct='${p.id}'; state.page='product'; render();"><div class="w-full h-28 rounded-lg mb-2 overflow-hidden">${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover" />` : renderPlaceholder(p.category)}</div><div class="font-semibold text-gray-800 text-sm">${p.name}</div><div class="text-xs text-gray-500 mb-1">${p.company_name ? p.company_name + ' · ' : ''}${p.category}</div>${p.chemical_name ? `<div class="text-xs text-blue-400">${p.chemical_name}</div>` : ''}${firstPkg ? `<div class="text-xs text-gray-400">MRP: ₹${firstPkg.mrp_per_unit || '-'}/unit</div><div class="text-green-700 font-bold text-sm">Billing: ₹${firstPkg.price_per_unit || '-'}/unit</div><div class="text-xs text-gray-500">₹${firstPkg.price_per_box}/${firstPkg.box_label}</div>` : '<div class="text-xs text-gray-400">No variants</div>'}</div>`;
-  }).join('');
   if (filtered.length === 0 && !state.loading) {
     grid.innerHTML = '<div class="col-span-2 text-center py-10 text-gray-400">No products found</div>';
+    return;
   }
+  grid.innerHTML = filtered.map(p => {
+    const v = p.variants && p.variants[0];
+    const pk = v && v.packagings && v.packagings[0];
+    const img = p.image_url ? '<img src="' + p.image_url + '" class="w-full h-full object-cover" />' : renderPlaceholder(p.category);
+    const price = pk ? '<div class="text-xs text-gray-400">MRP: \u20b9' + (pk.mrp_per_unit||'-') + '/unit</div><div class="text-green-700 font-bold text-sm">Billing: \u20b9' + (pk.price_per_unit||'-') + '/unit</div><div class="text-xs text-gray-500">\u20b9' + pk.price_per_box + '/' + pk.box_label + '</div>' : '<div class="text-xs text-gray-400">No variants</div>';
+    const chem = p.chemical_name ? '<div class="text-xs text-blue-400">' + p.chemical_name + '</div>' : '';
+    return '<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 cursor-pointer hover:shadow-md transition" onclick="state.selectedProduct=\'' + p.id + '\'; state.page=\'product\'; render();">'
+      + '<div class="w-full h-28 rounded-lg mb-2 overflow-hidden">' + img + '</div>'
+      + '<div class="font-semibold text-gray-800 text-sm">' + p.name + '</div>'
+      + '<div class="text-xs text-gray-500 mb-1">' + (p.company_name ? p.company_name + ' · ' : '') + p.category + '</div>'
+      + chem + price + '</div>';
+  }).join('');
 }
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
