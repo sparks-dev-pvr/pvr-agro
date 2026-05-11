@@ -688,55 +688,7 @@ async function updateOrderStatus(orderId, status, currentTab) {
 }
 
 async function generateInvoice(orderId) {
-  const order = (window._allOrders||[]).find(o => o.id === orderId);
-  if (!order) return;
-  const items = (window._allItems||[]).filter(i => i.order_id === orderId);
-const productIds = items.map(i => i.product_id).filter(Boolean);
-const { data: productData } = await db.from('products').select('id, hsn_code').in('id', productIds);
-const hsnMap = {};
-(productData||[]).forEach(p => hsnMap[p.id] = p.hsn_code || '-');
-  const { data: customer } = await db.from('customers').select('*').eq('id', order.customer_id).single();
-  const batchNo = prompt('Batch Number (leave blank if not applicable):', '') || '';
-  const mfgDate = prompt('Manufacturing Date (e.g. 01/01/2025):', '') || '';
-  const expDate = prompt('Expiry Date (e.g. 01/01/2027):', '') || '';
-  const itemGsts = [];
-  for (const item of items) {
-    const gst = prompt('GST % for "' + (item.product_name||item.products?.name||'Item') + '" (enter 0 if no GST):', '18');
-    if (gst === null) return;
-    itemGsts.push(parseFloat(gst) || 0);
-  }
-  const invoiceNo = 'P-26-' + order.id.substring(0,4).toUpperCase();
-  const invoiceDate = new Date(order.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'});
-  let totalTaxable = 0, totalCgst = 0, totalSgst = 0;
-  const itemRows = items.map((item, idx) => {
-    const gst = itemGsts[idx];
-    const taxable = item.total_price;
-    const cgst = gst > 0 ? taxable * gst / 2 / 100 : 0;
-    const sgst = gst > 0 ? taxable * gst / 2 / 100 : 0;
-    totalTaxable += taxable; totalCgst += cgst; totalSgst += sgst;
-    return { item, gst, taxable, cgst, sgst };
-  });
-  const totalTax = totalCgst + totalSgst;
-  const grandTotal = totalTaxable + totalTax;
-  const roundOff = Math.round(grandTotal) - grandTotal;
-  const finalTotal = Math.round(grandTotal);
-  const invoiceHTML = '<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Tax Invoice - ' + invoiceNo + '</title><style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;color:#000;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:4px 6px;font-size:10px;}th{background:#f0f0f0;font-weight:bold;}.tr{text-align:right;}.tc{text-align:center;}.bold{font-weight:bold;}.title{text-align:center;font-size:14px;font-weight:bold;margin-bottom:8px;}@media print{button{display:none;}}</style></head><body>' +
-    '<div class="title">Tax Invoice</div>' +
-    '<table><tr><td style="width:50%;vertical-align:top;padding:8px;"><div style="display:flex;align-items:center;gap:8px;"><img src="' + LOGO_URL + '" style="width:50px;height:50px;object-fit:cover;border-radius:50%;" /><div><div style="font-size:15px;font-weight:bold;">P.V.R AGROCHEMICALS</div><div style="color:#cc0000;font-size:10px;">BLOCK NO 31 PLOT NO 45 DOOR NO 4-10-1246 AUTO NAGAR<br>RANGA REDDY DISTRICT</div><div>Phone: 9573711019 | Email: pvragrochem@gmail.com</div><div>GSTIN: 36AJRPR1684F1ZP | State: 36-Telangana</div></div></div></td>' +
-    '<td style="width:50%;vertical-align:top;padding:0;"><table style="width:100%;"><tr><td style="padding:4px;"><b>Invoice No.</b><br>' + invoiceNo + '</td><td style="padding:4px;"><b>Date</b><br>' + invoiceDate + '</td></tr><tr><td style="padding:4px;"><b>Place of Supply</b><br>36-Telangana</td><td style="padding:4px;"><b>Transport</b><br>' + (order.transport_name||'-') + '</td></tr><tr><td colspan="2" style="padding:4px;"><b>Delivery Location</b><br>' + (order.shipping_address||'-') + '</td></tr></table></td></tr></table>' +
-    '<table style="margin-top:4px;"><tr><td style="width:50%;padding:8px;"><b>Bill To</b><br><b>' + (customer?.name||'-') + '</b><br>' + (customer?.address||'') + '<br>Contact: ' + (customer?.phone||'') + (customer?.gst_number?'<br>GSTIN: '+customer.gst_number:'') + '<br>State: 36-Telangana</td><td style="width:50%;padding:8px;"><b>Ship To</b><br>' + (order.shipping_address||'-') + '</td></tr></table>' +
-    '<table style="margin-top:4px;"><thead><tr><th class="tc">#</th><th>Item Name</th><th>HSN/SAC</th><th class="tc">Batch</th><th class="tc">Exp.Date</th><th class="tc">Mfg.Date</th><th class="tc">Size</th><th class="tc">Qty</th><th class="tc">Unit</th><th class="tr">Price/Unit</th><th class="tc">GST%</th><th class="tr">Amount</th></tr></thead><tbody>' +
-    itemRows.map(function(r,idx){ return '<tr><td class="tc">'+(idx+1)+'</td><td>'+(r.item.product_name||r.item.products?.name||'-')+'</td><td class="tc">'+(hsnMap[r.item.product_id]||'-')+'</td><td class="tc">'+(batchNo||'-')+'</td><td class="tc">'+(expDate||'-')+'</td><td class="tc">'+(mfgDate||'-')+'</td><td class="tc">'+(r.item.variant_name||r.item.product_variants?.bag_size||'-')+'</td><td class="tc">'+r.item.quantity+'</td><td class="tc">Pcs</td><td class="tr">₹ '+r.item.unit_price+'</td><td class="tc">'+r.gst+'%</td><td class="tr">₹ '+r.item.total_price.toFixed(2)+'</td></tr>'; }).join('') +
-    '<tr class="bold"><td colspan="7">Total</td><td class="tc">' + items.reduce(function(s,i){return s+i.quantity;},0) + '</td><td colspan="3"></td><td class="tr">₹ ' + totalTaxable.toFixed(2) + '</td></tr></tbody></table>' +
-    '<table style="margin-top:4px;"><tr><td style="width:50%;padding:8px;"><b>Invoice Amount In Words</b><br>' + numberToWords(finalTotal) + ' Rupees only</td><td style="width:50%;padding:0;"><table style="width:100%;border:none;"><tr><td style="border:none;padding:2px 6px;">Sub Total</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalTaxable.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">CGST</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalCgst.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">SGST</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + totalSgst.toFixed(2) + '</td></tr><tr><td style="border:none;padding:2px 6px;">Round off</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + roundOff.toFixed(2) + '</td></tr><tr class="bold"><td style="border:none;padding:2px 6px;">Total</td><td style="border:none;padding:2px 6px;" class="tr">₹ ' + finalTotal + '.00</td></tr><tr><td style="border:none;padding:2px 6px;color:red;"><b>Balance</b></td><td style="border:none;padding:2px 6px;color:red;" class="tr"><b>₹ ' + finalTotal + '.00</b></td></tr></table></td></tr></table>' +
-    '<table style="margin-top:4px;"><thead><tr><th>HSN/SAC</th><th>Taxable Amt</th><th>CGST Rate</th><th>CGST Amt</th><th>SGST Rate</th><th>SGST Amt</th><th>Total Tax</th></tr></thead><tbody>' +
-    itemRows.map(function(r){ return '<tr><td>-</td><td class="tr">₹ '+r.taxable.toFixed(2)+'</td><td class="tc">'+(r.gst/2)+'%</td><td class="tr">₹ '+r.cgst.toFixed(2)+'</td><td class="tc">'+(r.gst/2)+'%</td><td class="tr">₹ '+r.sgst.toFixed(2)+'</td><td class="tr">₹ '+(r.cgst+r.sgst).toFixed(2)+'</td></tr>'; }).join('') +
-    '<tr class="bold"><td>Total</td><td class="tr">₹ '+totalTaxable.toFixed(2)+'</td><td></td><td class="tr">₹ '+totalCgst.toFixed(2)+'</td><td></td><td class="tr">₹ '+totalSgst.toFixed(2)+'</td><td class="tr">₹ '+(totalCgst+totalSgst).toFixed(2)+'</td></tr></tbody></table>' +
-    '<table style="margin-top:4px;"><tr><td style="width:33%;padding:8px;"><b>Bank Details</b><br>Name: STATE BANK OF INDIA, HAYATNAGAR<br>Account No.: 39550894944<br>IFSC: SBIN0011080<br>Account Holder: P.V.R AGRO CHEMICALS</td><td style="width:33%;padding:8px;"><b>Terms and conditions</b><br>Dealer should inform to the company within a week from date of invoice if any damage or short material received. Stock returns are not accepted.</td><td style="width:33%;padding:8px;text-align:right;"><b>For: P.V.R AGROCHEMICALS</b><br><br><br><br><b>Authorized Signatory</b></td></tr></table>' +
-    '<br><button onclick="window.print()" style="padding:8px 20px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ Print Invoice</button></body></html>';
-  const win = window.open('', '_blank');
-  win.document.write(invoiceHTML);
-  win.document.close();
+  window.open('invoice.html?id=' + orderId, '_blank');
 }
 
 function numberToWords(num) {
