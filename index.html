@@ -697,7 +697,7 @@ async function generateInvoice(orderId) {
   const expDate = prompt('Expiry Date (e.g. 01/01/2027):', '') || '';
   const itemGsts = [];
   for (const item of items) {
-    const gst = prompt('GST % for "' + item.products?.name + '" (enter 0 if no GST):', '18');
+    const gst = prompt('GST % for "' + (item.product_name||item.products?.name||'Item') + '" (enter 0 if no GST):', '18');
     if (gst === null) return;
     itemGsts.push(parseFloat(gst) || 0);
   }
