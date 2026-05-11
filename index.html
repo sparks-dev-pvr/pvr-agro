@@ -691,6 +691,10 @@ async function generateInvoice(orderId) {
   const order = (window._allOrders||[]).find(o => o.id === orderId);
   if (!order) return;
   const items = (window._allItems||[]).filter(i => i.order_id === orderId);
+const productIds = items.map(i => i.product_id).filter(Boolean);
+const { data: productData } = await db.from('products').select('id, hsn_code').in('id', productIds);
+const hsnMap = {};
+(productData||[]).forEach(p => hsnMap[p.id] = p.hsn_code || '-');
   const { data: customer } = await db.from('customers').select('*').eq('id', order.customer_id).single();
   const batchNo = prompt('Batch Number (leave blank if not applicable):', '') || '';
   const mfgDate = prompt('Manufacturing Date (e.g. 01/01/2025):', '') || '';
