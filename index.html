@@ -465,7 +465,7 @@ async function showAdminTab(tab) {
 
   if (tab === 'orders') {
     const { data: orders } = await db.from('orders').select('*, customers(name, phone)').order('created_at', { ascending: false });
-    const { data: items } = await db.from('order_items').select('*, products(name), product_variants(bag_size)');
+    const { data: items } = await db.from('order_items').select('*');
     window._allOrders = orders || [];
     window._allItems = items || [];
     renderOrdersTab('pending');
