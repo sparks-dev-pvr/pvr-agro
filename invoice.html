@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tax Invoice — PVR Agro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  background: #f1f5f9;
+  color: #111;
+}
+
+/* ── EDITOR PANEL ── */
+#editor {
+  background: #fff;
+  border-bottom: 3px solid #15803d;
+  padding: 16px 20px;
+}
+
+#editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+#editor-header h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #166534;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.ed-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.inv-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.field label {
+  display: block;
+  font-size: 9px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 3px;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-size: 11px;
+  background: #fafafa;
+  color: #111;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: #15803d;
+  background: #fff;
+}
+
+/* Item editor table */
+.item-editor {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-bottom: 10px;
+}
+
+.item-editor th {
+  background: #15803d;
+  color: #fff;
+  padding: 6px 5px;
+  text-align: left;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  white-space: nowrap;
+}
+
+.item-editor td {
+  padding: 5px 4px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.item-editor tr:nth-child(even) td { background: #f9fafb; }
+
+.item-editor input {
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 4px 5px;
+  font-size: 10px;
+  width: 100%;
+  background: #fff;
+  color: #111;
+}
+
+.item-editor input:focus {
+  outline: none;
+  border-color: #15803d;
+}
+
+.item-name { font-weight: 700; font-size: 11px; }
+.item-variant { color: #6b7280; font-size: 10px; }
+
+.btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-update {
+  background: #15803d;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 22px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-update:hover { background: #166534; }
+
+.btn-print {
+  background: #1e40af;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 22px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-print:hover { background: #1e3a8a; }
+
+#loading-msg {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* ── INVOICE PREVIEW ── */
+#preview-wrap {
+  max-width: 860px;
+  margin: 24px auto 40px;
+  background: #fff;
+  box-shadow: 0 4px 20px rgba(0,0,0,.10);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#invoice {
+  padding: 26px 30px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #15803d;
+  padding-bottom: 14px;
+  margin-bottom: 12px;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+
+.brand img {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #dcfce7;
+}
+
+.brand-name { font-size: 16px; font-weight: 700; color: #166534; }
+.brand-addr { font-size: 9px; color: #b91c1c; margin-top: 2px; line-height: 1.4; }
+.brand-meta { font-size: 9px; color: #6b7280; margin-top: 3px; }
+
+.inv-title-box { text-align: right; }
+.inv-title { font-size: 18px; font-weight: 700; color: #166534; letter-spacing: .04em; text-transform: uppercase; }
+.inv-no { font-size: 12px; font-weight: 700; margin-top: 3px; }
+.inv-meta-line { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+.parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.party-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+
+.party-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #15803d;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.party-name { font-weight: 700; font-size: 11px; margin-bottom: 1px; }
+.party-detail { color: #6b7280; font-size: 9.5px; line-height: 1.5; }
+
+/* Invoice items table */
+.inv-items {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+  font-size: 10px;
+}
+
+.inv-items thead th {
+  background: #15803d;
+  color: #fff;
+  padding: 6px 5px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+.inv-items thead th.tr { text-align: right; }
+.inv-items thead th.tc { text-align: center; }
+
+.inv-items tbody td {
+  padding: 5px 5px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+}
+
+.inv-items tbody tr:nth-child(even) td { background: #f9fafb; }
+
+.inv-items tfoot td {
+  background: #f0fdf4;
+  font-weight: 700;
+  border-top: 2px solid #15803d;
+  font-size: 10.5px;
+  padding: 6px 5px;
+}
+
+.tr { text-align: right; }
+.tc { text-align: center; }
+.bold { font-weight: 700; }
+
+/* Bottom section */
+.inv-bottom {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.totals-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px dashed #e5e7eb;
+  font-size: 11px;
+}
+
+.totals-row.final {
+  border-bottom: none;
+  border-top: 2px solid #15803d;
+  font-weight: 700;
+  font-size: 13px;
+  color: #166534;
+  margin-top: 4px;
+  padding-top: 5px;
+}
+
+.totals-row.balance {
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 12px;
+  border-bottom: none;
+}
+
+.words-box {
+  background: #f0fdf4;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 10px;
+}
+
+.words-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #15803d;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bank-box {
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 10px;
+}
+
+.bank-label {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #6b7280;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.bank-row { display: flex; gap: 6px; margin-bottom: 2px; }
+.bank-key { color: #6b7280; min-width: 60px; }
+.bank-val { font-weight: 700; }
+
+/* GST summary table */
+.gst-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+  margin-bottom: 12px;
+}
+
+.gst-table th {
+  background: #f0fdf4;
+  color: #166534;
+  padding: 5px 6px;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  border: 1px solid #d1fae5;
+}
+
+.gst-table td { padding: 4px 6px; border: 1px solid #e5e7eb; }
+
+.gst-table tfoot td {
+  background: #f0fdf4;
+  font-weight: 700;
+  border: 1px solid #d1fae5;
+}
+
+.terms-box {
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 9px;
+  color: #92400e;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.sign-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sign-box { text-align: center; min-width: 160px; }
+
+.sign-line {
+  border-top: 1px solid #6b7280;
+  margin-top: 40px;
+  padding-top: 4px;
+  font-size: 9px;
+  color: #6b7280;
+}
+
+/* Print styles */
+@media print {
+  #editor { display: none !important; }
+  body { background: #fff; }
+  #preview-wrap { box-shadow: none; margin: 0; border-radius: 0; }
+  #invoice { padding: 14px 18px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loading-msg">Loading invoice data...</div>
+
+<div id="editor" style="display:none">
+  <div id="editor-header">
+    <h2 id="editor-title">Invoice Editor</h2>
+    <div style="font-size:10px;color:#6b7280;">Fields update the preview live</div>
+  </div>
+
+  <div class="ed-section-title">Invoice Details</div>
+  <div class="inv-meta-grid">
+    <div class="field"><label>Invoice No</label><input id="f_invno"/></div>
+    <div class="field"><label>Invoice Date</label><input id="f_date"/></div>
+    <div class="field"><label>Transport</label><input id="f_transport"/></div>
+    <div class="field"><label>Place of Supply</label><input id="f_pos" value="36-Telangana"/></div>
+  </div>
+
+  <div class="ed-section-title">Per-Item Details (Batch, Dates, GST, Discount)</div>
+  <div style="overflow-x:auto;">
+    <table class="item-editor">
+      <thead>
+        <tr>
+          <th style="min-width:140px">Product</th>
+          <th style="min-width:70px">Size</th>
+          <th style="min-width:65px">HSN</th>
+          <th style="min-width:90px">Batch No</th>
+          <th style="min-width:85px">Mfg Date</th>
+          <th style="min-width:85px">Exp Date</th>
+          <th style="min-width:55px">GST %</th>
+          <th style="min-width:65px">Disc %</th>
+          <th style="min-width:65px">Disc ₹</th>
+        </tr>
+      </thead>
+      <tbody id="item_editor_body"></tbody>
+    </table>
+  </div>
+
+  <div class="btns">
+    <button class="btn-update" onclick="generatePreview()">🔄 Update Preview</button>
+    <button class="btn-print" onclick="window.print()">🖨️ Print Invoice</button>
+  </div>
+</div>
+
+<div id="preview-wrap" style="display:none">
+  <div id="invoice"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZGphanVoZnFtdXV6amVqbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDY2ODcsImV4cCI6MjA5MzYyMjY4N30.Y1w43s7vx2V_XkgYvSUB0xTIsnGGFWyCU09z_r_otEg';
+const LOGO = 'https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let ORDER = null;
+let CUSTOMER = null;
+let ITEMS = [];
+
+// Read order ID from URL
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get('id');
+
+async function init() {
+  if (!orderId) {
+    document.getElementById('loading-msg').textContent = 'No order ID provided.';
+    return;
+  }
+
+  // Fetch order
+  const { data: order } = await db.from('orders').select('*').eq('id', orderId).single();
+  if (!order) {
+    document.getElementById('loading-msg').textContent = 'Order not found.';
+    return;
+  }
+  ORDER = order;
+
+  // Fetch customer
+  const { data: customer } = await db.from('customers').select('*').eq('id', order.customer_id).single();
+  CUSTOMER = customer || {};
+
+  // Fetch order items
+  const { data: items } = await db.from('order_items').select('*').eq('order_id', orderId);
+
+  // Fetch HSN codes
+  const productIds = (items || []).map(i => i.product_id).filter(Boolean);
+  let hsnMap = {};
+  if (productIds.length > 0) {
+    const { data: products } = await db.from('products').select('id, hsn_code').in('id', productIds);
+    (products || []).forEach(p => { hsnMap[p.id] = p.hsn_code || ''; });
+  }
+
+  ITEMS = (items || []).map(i => ({
+    product_id: i.product_id,
+    product_name: i.product_name || '',
+    variant_name: i.variant_name || '',
+    quantity: i.quantity,
+    unit_price: i.unit_price,
+    total_price: i.total_price,
+    hsn_code: hsnMap[i.product_id] || '',
+  }));
+
+  // Set invoice meta fields
+  const invoiceNo = 'P-26-' + order.id.substring(0, 4).toUpperCase();
+  const invoiceDate = new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  document.getElementById('f_invno').value = invoiceNo;
+  document.getElementById('f_date').value = invoiceDate;
+  document.getElementById('f_transport').value = order.transport_name || '';
+  document.getElementById('editor-title').textContent = 'Invoice Editor — ' + invoiceNo;
+  document.title = 'Tax Invoice - ' + invoiceNo;
+
+  // Build item editor rows
+  const tbody = document.getElementById('item_editor_body');
+  ITEMS.forEach(function(item, i) {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><div class="item-name">' + item.product_name + '</div></td>' +
+      '<td><div class="item-variant">' + item.variant_name + '</div></td>' +
+      '<td><input id="hsn_' + i + '" value="' + item.hsn_code + '" placeholder="-"/></td>' +
+      '<td><input id="batch_' + i + '" placeholder="Batch No"/></td>' +
+      '<td><input id="mfg_' + i + '" placeholder="MM/YYYY"/></td>' +
+      '<td><input id="exp_' + i + '" placeholder="MM/YYYY"/></td>' +
+      '<td><input id="gst_' + i + '" type="number" value="18" min="0" max="28"/></td>' +
+      '<td><input id="discp_' + i + '" type="number" value="0" min="0" placeholder="%"/></td>' +
+      '<td><input id="discr_' + i + '" type="number" value="0" min="0" placeholder="₹"/></td>';
+    tbody.appendChild(tr);
+
+    // Sync discount % → ₹
+    document.getElementById('discp_' + i).addEventListener('input', function() {
+      var base = ITEMS[i].total_price;
+      var pct = parseFloat(this.value) || 0;
+      document.getElementById('discr_' + i).value = (base * pct / 100).toFixed(2);
+      generatePreview();
+    });
+
+    // Sync discount ₹ → %
+    document.getElementById('discr_' + i).addEventListener('input', function() {
+      var base = ITEMS[i].total_price;
+      var rs = parseFloat(this.value) || 0;
+      document.getElementById('discp_' + i).value = base > 0 ? (rs * 100 / base).toFixed(2) : '0';
+      generatePreview();
+    });
+
+    // GST change → refresh preview
+    document.getElementById('gst_' + i).addEventListener('input', generatePreview);
+    document.getElementById('hsn_' + i).addEventListener('input', generatePreview);
+    document.getElementById('batch_' + i).addEventListener('input', generatePreview);
+    document.getElementById('mfg_' + i).addEventListener('input', generatePreview);
+    document.getElementById('exp_' + i).addEventListener('input', generatePreview);
+  });
+
+  // Also refresh on meta field changes
+  document.getElementById('f_invno').addEventListener('input', generatePreview);
+  document.getElementById('f_date').addEventListener('input', generatePreview);
+  document.getElementById('f_transport').addEventListener('input', generatePreview);
+  document.getElementById('f_pos').addEventListener('input', generatePreview);
+
+  // Show UI
+  document.getElementById('loading-msg').style.display = 'none';
+  document.getElementById('editor').style.display = 'block';
+  document.getElementById('preview-wrap').style.display = 'block';
+
+  generatePreview();
+}
+
+function fmt(n) {
+  return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function n2w(num) {
+  var ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  if (num === 0) return 'Zero';
+  if (num < 20) return ones[num];
+  if (num < 100) return tens[Math.floor(num/10)] + (num%10 ? ' ' + ones[num%10] : '');
+  if (num < 1000) return ones[Math.floor(num/100)] + ' Hundred' + (num%100 ? ' ' + n2w(num%100) : '');
+  if (num < 100000) return n2w(Math.floor(num/1000)) + ' Thousand' + (num%1000 ? ' ' + n2w(num%1000) : '');
+  if (num < 10000000) return n2w(Math.floor(num/100000)) + ' Lakh' + (num%100000 ? ' ' + n2w(num%100000) : '');
+  return n2w(Math.floor(num/10000000)) + ' Crore' + (num%10000000 ? ' ' + n2w(num%10000000) : '');
+}
+
+function generatePreview() {
+  var invNo = document.getElementById('f_invno').value;
+  var invDate = document.getElementById('f_date').value;
+  var transport = document.getElementById('f_transport').value || '—';
+  var pos = document.getElementById('f_pos').value || '36-Telangana';
+
+  var totalTaxable = 0, totalDisc = 0, totalCgst = 0, totalSgst = 0, totalQty = 0;
+  var gstGroups = {};
+  var itemRowsHTML = '';
+
+  for (var i = 0; i < ITEMS.length; i++) {
+    var item = ITEMS[i];
+    var hsn = document.getElementById('hsn_' + i).value || '-';
+    var batch = document.getElementById('batch_' + i).value || '-';
+    var mfg = document.getElementById('mfg_' + i).value || '-';
+    var exp = document.getElementById('exp_' + i).value || '-';
+    var gstPct = parseFloat(document.getElementById('gst_' + i).value) || 0;
+    var discRs = parseFloat(document.getElementById('discr_' + i).value) || 0;
+    var discPct = parseFloat(document.getElementById('discp_' + i).value) || 0;
+
+    var taxableAmt = item.total_price - discRs;
+    var cgst = taxableAmt * gstPct / 2 / 100;
+    var sgst = taxableAmt * gstPct / 2 / 100;
+
+    totalTaxable += taxableAmt;
+    totalDisc += discRs;
+    totalCgst += cgst;
+    totalSgst += sgst;
+    totalQty += item.quantity;
+
+    var key = gstPct + '%';
+    if (!gstGroups[key]) gstGroups[key] = { taxable: 0, cgst: 0, sgst: 0, rate: gstPct };
+    gstGroups[key].taxable += taxableAmt;
+    gstGroups[key].cgst += cgst;
+    gstGroups[key].sgst += sgst;
+
+    var discCell = discRs > 0
+      ? '<td class="tc">' + discPct.toFixed(1) + '%</td><td class="tr">&#8377;' + fmt(discRs) + '</td>'
+      : '<td class="tc">&#8212;</td><td class="tr">&#8212;</td>';
+
+    itemRowsHTML +=
+      '<tr>' +
+        '<td class="tc">' + (i+1) + '</td>' +
+        '<td class="bold">' + item.product_name + '</td>' +
+        '<td class="tc">' + hsn + '</td>' +
+        '<td class="tc">' + batch + '</td>' +
+        '<td class="tc">' + mfg + '</td>' +
+        '<td class="tc">' + exp + '</td>' +
+        '<td class="tc">' + item.variant_name + '</td>' +
+        '<td class="tc">' + item.quantity + '</td>' +
+        '<td class="tc">Pcs</td>' +
+        '<td class="tr">&#8377;' + fmt(item.unit_price) + '</td>' +
+        discCell +
+        '<td class="tc">' + gstPct + '%</td>' +
+        '<td class="tr bold">&#8377;' + fmt(taxableAmt) + '</td>' +
+      '</tr>';
+  }
+
+  var totalTax = totalCgst + totalSgst;
+  var grandTotal = totalTaxable + totalTax;
+  var roundOff = Math.round(grandTotal) - grandTotal;
+  var finalTotal = Math.round(grandTotal);
+
+  // GST breakdown rows
+  var gstRowsHTML = '';
+  var gstKeys = Object.keys(gstGroups);
+  for (var g = 0; g < gstKeys.length; g++) {
+    var grp = gstGroups[gstKeys[g]];
+    gstRowsHTML +=
+      '<tr>' +
+        '<td>' + grp.rate + '%</td>' +
+        '<td class="tr">&#8377;' + fmt(grp.taxable) + '</td>' +
+        '<td class="tc">' + (grp.rate/2) + '%</td>' +
+        '<td class="tr">&#8377;' + fmt(grp.cgst) + '</td>' +
+        '<td class="tc">' + (grp.rate/2) + '%</td>' +
+        '<td class="tr">&#8377;' + fmt(grp.sgst) + '</td>' +
+        '<td class="tr bold">&#8377;' + fmt(grp.cgst + grp.sgst) + '</td>' +
+      '</tr>';
+  }
+
+  // Discount row in totals (only if any discount)
+  var discountTotalsHTML = '';
+  if (totalDisc > 0) {
+    discountTotalsHTML =
+      '<div class="totals-row"><span>Gross Total</span><span>&#8377;' + fmt(totalTaxable + totalDisc) + '</span></div>' +
+      '<div class="totals-row"><span>Total Discount</span><span style="color:#15803d">&#8722;&#8377;' + fmt(totalDisc) + '</span></div>';
+  }
+
+  document.getElementById('invoice').innerHTML =
+    '<div class="inv-header">' +
+      '<div class="brand">' +
+        '<img src="' + LOGO + '" onerror="this.style.display=\'none\'"/>' +
+        '<div>' +
+          '<div class="brand-name">P.V.R AGROCHEMICALS</div>' +
+          '<div class="brand-addr">Block No 31, Plot No 45, D.No 4-10-1246, Auto Nagar,<br/>Hayathnagar (M), Rangareddy (Dt), Hyderabad - 500070</div>' +
+          '<div class="brand-meta">&#128222; 9573711019 &nbsp;|&nbsp; pvragrochem@gmail.com &nbsp;|&nbsp; GSTIN: 36AJRPR1684F1ZP &nbsp;|&nbsp; State: 36-Telangana</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="inv-title-box">' +
+        '<div class="inv-title">Tax Invoice</div>' +
+        '<div class="inv-no">' + invNo + '</div>' +
+        '<div class="inv-meta-line">Date: ' + invDate + '</div>' +
+        '<div class="inv-meta-line">Transport: ' + transport + '</div>' +
+        '<div class="inv-meta-line">Place of Supply: ' + pos + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="parties">' +
+      '<div class="party-box">' +
+        '<div class="party-label">Bill To</div>' +
+        '<div class="party-name">' + (CUSTOMER.name || '&#8212;') + '</div>' +
+        '<div class="party-detail">' +
+          (CUSTOMER.address || '') + '<br/>' +
+          '&#128222; ' + (CUSTOMER.phone || '') +
+          (CUSTOMER.gst_number ? '<br/>GSTIN: ' + CUSTOMER.gst_number : '') +
+          '<br/>State: 36-Telangana' +
+        '</div>' +
+      '</div>' +
+      '<div class="party-box">' +
+        '<div class="party-label">Ship To</div>' +
+        '<div class="party-detail">' + (ORDER.shipping_address || '&#8212;') + '</div>' +
+      '</div>' +
+      '<div class="party-box">' +
+        '<div class="party-label">Order Info</div>' +
+        '<div class="party-detail">' +
+          '<strong>Order ID:</strong> ' + ORDER.id.substring(0,8).toUpperCase() + '<br/>' +
+          '<strong>Payment:</strong> ' + ORDER.payment_method +
+          (ORDER.transport_name ? '<br/><strong>Transport:</strong> ' + ORDER.transport_name : '') +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<table class="inv-items">' +
+      '<thead><tr>' +
+        '<th class="tc">#</th>' +
+        '<th>Item</th>' +
+        '<th class="tc">HSN</th>' +
+        '<th class="tc">Batch</th>' +
+        '<th class="tc">Mfg</th>' +
+        '<th class="tc">Exp</th>' +
+        '<th class="tc">Size</th>' +
+        '<th class="tc">Qty</th>' +
+        '<th class="tc">Unit</th>' +
+        '<th class="tr">Price/Unit</th>' +
+        '<th class="tc">Disc%</th>' +
+        '<th class="tr">Disc&#8377;</th>' +
+        '<th class="tc">GST%</th>' +
+        '<th class="tr">Amount</th>' +
+      '</tr></thead>' +
+      '<tbody>' + itemRowsHTML + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td colspan="7" class="bold">Total</td>' +
+        '<td class="tc bold">' + totalQty + '</td>' +
+        '<td colspan="4"></td>' +
+        '<td></td>' +
+        '<td class="tr bold">&#8377;' + fmt(totalTaxable) + '</td>' +
+      '</tr></tfoot>' +
+    '</table>' +
+
+    '<div class="inv-bottom">' +
+      '<div class="words-box">' +
+        '<div class="words-label">Amount in Words</div>' +
+        '<strong>' + n2w(finalTotal) + ' Rupees Only</strong>' +
+      '</div>' +
+      '<div>' +
+        discountTotalsHTML +
+        '<div class="totals-row"><span>Taxable Amount</span><span>&#8377;' + fmt(totalTaxable) + '</span></div>' +
+        '<div class="totals-row"><span>CGST</span><span>&#8377;' + fmt(totalCgst) + '</span></div>' +
+        '<div class="totals-row"><span>SGST</span><span>&#8377;' + fmt(totalSgst) + '</span></div>' +
+        '<div class="totals-row"><span>Round Off</span><span>&#8377;' + roundOff.toFixed(2) + '</span></div>' +
+        '<div class="totals-row final"><span>Grand Total</span><span>&#8377;' + finalTotal + '.00</span></div>' +
+        '<div class="totals-row balance"><span>Balance Due</span><span>&#8377;' + finalTotal + '.00</span></div>' +
+      '</div>' +
+      '<div class="bank-box">' +
+        '<div class="bank-label">Bank Details</div>' +
+        '<div class="bank-row"><span class="bank-key">Bank</span><span class="bank-val">SBI, Hayatnagar</span></div>' +
+        '<div class="bank-row"><span class="bank-key">A/C No</span><span class="bank-val">39550894944</span></div>' +
+        '<div class="bank-row"><span class="bank-key">IFSC</span><span class="bank-val">SBIN0011080</span></div>' +
+        '<div class="bank-row"><span class="bank-key">Holder</span><span class="bank-val">P.V.R AGRO CHEMICALS</span></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<table class="gst-table">' +
+      '<thead><tr>' +
+        '<th>GST Rate</th>' +
+        '<th class="tr">Taxable Amt</th>' +
+        '<th class="tc">CGST Rate</th>' +
+        '<th class="tr">CGST Amt</th>' +
+        '<th class="tc">SGST Rate</th>' +
+        '<th class="tr">SGST Amt</th>' +
+        '<th class="tr">Total Tax</th>' +
+      '</tr></thead>' +
+      '<tbody>' + gstRowsHTML + '</tbody>' +
+      '<tfoot><tr>' +
+        '<td class="bold">Total</td>' +
+        '<td class="tr bold">&#8377;' + fmt(totalTaxable) + '</td>' +
+        '<td></td>' +
+        '<td class="tr bold">&#8377;' + fmt(totalCgst) + '</td>' +
+        '<td></td>' +
+        '<td class="tr bold">&#8377;' + fmt(totalSgst) + '</td>' +
+        '<td class="tr bold">&#8377;' + fmt(totalCgst + totalSgst) + '</td>' +
+      '</tr></tfoot>' +
+    '</table>' +
+
+    '<div class="terms-box">' +
+      '<strong>Terms &amp; Conditions:</strong> Dealer should inform to the company within a week from date of invoice if any damage or short material received. Stock returns are not accepted.' +
+    '</div>' +
+
+    '<div class="sign-row">' +
+      '<div class="sign-box">' +
+        '<div style="font-size:10px;color:#6b7280;margin-bottom:2px;">For</div>' +
+        '<div style="font-weight:700;font-size:11px;color:#166534;">P.V.R AGROCHEMICALS</div>' +
+        '<div class="sign-line">Authorized Signatory</div>' +
+      '</div>' +
+    '</div>';
+}
+
+init();
+</script>
+</body>
+</html>
