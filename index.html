@@ -634,7 +634,7 @@ function renderOrdersTab(activeStatus) {
                   <div class="flex-1">
                     <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
                     <div class="text-sm font-semibold text-green-700 mt-1">₹${o.total_amount} · ${o.payment_method}</div>
-                    <div class="text-xs text-gray-600 mt-1">${orderItems.map(i=>(i.products?.name||'')+'('+( i.product_variants?.bag_size||'')+') x'+i.quantity).join(', ')}</div>
+                    <div class="text-xs text-gray-600 mt-1">${orderItems.map(i=>(i.product_name||i.products?.name||'')+'('+(i.variant_name||i.product_variants?.bag_size||'')+') x'+i.quantity).join(', ')}</div>
                     ${o.shipping_address?`<div class="text-xs text-gray-400 mt-1">📍 ${o.shipping_address}</div>`:''}
                     ${o.transport_name?`<div class="text-xs text-gray-400">🚚 ${o.transport_name}</div>`:''}
                   </div>
