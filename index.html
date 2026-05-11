@@ -764,7 +764,7 @@ async function refreshCreditDetail(customerId) {
     const { data: allItems } = await db.from('order_items').select('*, products(name), product_variants(bag_size)').in('order_id', orderIds);
     (allItems||[]).forEach(item => {
       if (!orderItemsMap[item.order_id]) orderItemsMap[item.order_id] = [];
-      orderItemsMap[item.order_id].push(item.products?.name + ' ' + item.product_variants?.bag_size + ' x' + item.quantity);
+      orderItemsMap[item.order_id].push((item.product_name||item.products?.name) + ' ' + (item.variant_name||item.product_variants?.bag_size) + ' x' + item.quantity);
     });
   }
   let runningBalance = 0;
