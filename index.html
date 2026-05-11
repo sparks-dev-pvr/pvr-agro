@@ -597,7 +597,7 @@ function renderOrdersTab(activeStatus) {
         </div>
       </div>
       <div class="text-sm text-gray-600 border-t pt-2">
-        ${orderItems.map(i => (i.products?.name||'') + ' (' + (i.product_variants?.bag_size||'') + ') x' + i.quantity).join(', ')}
+        ${orderItems.map(i => (i.product_name||i.products?.name||'') + ' (' + (i.variant_name||i.product_variants?.bag_size||'') + ') x' + i.quantity).join(', ')}
       </div>
       ${o.shipping_address ? `<div class="text-xs text-gray-400 mt-1">📍 ${o.shipping_address}</div>` : ''}
       ${o.transport_name ? `<div class="text-xs text-gray-400">🚚 ${o.transport_name}</div>` : ''}
