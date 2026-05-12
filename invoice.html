@@ -518,6 +518,8 @@ function recalcAll() {
   const roundoff = rounded - afterDiscount;
   document.getElementById('total_qty').textContent = totalQty;
   document.getElementById('total_amount').textContent = fmt(totalAmt);
+  const globalDiscount = parseFloat(document.getElementById('t_discount')?.value) || 0;
+  if (globalDiscount === 0) document.getElementById('t_discount').value = '0.00';
   document.getElementById('t_subtotal').textContent = fmt(subtotal);
   document.getElementById('t_roundoff').textContent = fmt(roundoff);
   document.getElementById('t_total').textContent = fmt(rounded);
