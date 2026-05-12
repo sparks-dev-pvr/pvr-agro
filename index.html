@@ -727,7 +727,7 @@ async function showAdminTab(tab) {
             <div class="text-right">
               <div class="text-sm font-bold ${l.entry_type==='in'?'text-green-600':'text-red-500'}">${l.entry_type==='in'?'+':'-'}₹${(l.amount||0).toLocaleString('en-IN')}</div>
               <div class="text-xs text-gray-400">Bal: ₹${(l.running_balance||0).toLocaleString('en-IN')}</div>
-              <button onclick="deleteCashBankEntry('${l.id}')" class="text-red-400 text-xs">🗑</button>
+              <button onclick="deleteCashBankEntry('${l.id}')" class="text-red-400 text-xs">X</button>
             </div>
           </div>`).join('')}
       </div>`;
