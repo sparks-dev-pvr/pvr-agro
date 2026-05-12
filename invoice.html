@@ -317,6 +317,10 @@ body { font-family: Arial, sans-serif; font-size: 12px; background: #f0f0f0; col
       </div>
       <div class="totals-block">
         <div class="totals-row"><span>Sub Total</span><span id="t_subtotal">₹0.00</span></div>
+        <div class="totals-row">
+          <span>Discount</span>
+          <span>₹<input class="ef ef-right ef-num" id="t_discount" value="0.00" oninput="recalcAll()" /></span>
+        </div>
         <div class="totals-row"><span>Round Off</span><span id="t_roundoff">₹0.00</span></div>
         <div class="totals-row grand"><span>Total</span><span id="t_total">₹0.00</span></div>
         <div class="totals-row">
