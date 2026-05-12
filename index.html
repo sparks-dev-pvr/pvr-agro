@@ -1345,6 +1345,155 @@ async function aiSaveItems(orderId, customerId) {
   } catch (err) { alert('Error: ' + err.message); console.error(err); }
 }
 
+function showAddSupplier() {
+  const form = document.getElementById('add_supplier_form');
+  if (form.innerHTML !== '') { form.innerHTML = ''; return; }
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-green-200">
+      <h3 class="font-bold text-green-700 mb-3">Add New Supplier</h3>
+      <div class="space-y-2">
+        <input id="ns_name" placeholder="Company Name *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ns_phone" placeholder="Phone Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ns_gst" placeholder="GST Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ns_state" placeholder="State" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <textarea id="ns_address" placeholder="Address" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        <button onclick="saveNewSupplier()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Save Supplier</button>
+      </div>
+    </div>`;
+}
+
+async function saveNewSupplier() {
+  const name = document.getElementById('ns_name').value.trim();
+  if (!name) { alert('Company name is required!'); return; }
+  const { error } = await db.from('suppliers').insert({
+    name,
+    phone: document.getElementById('ns_phone').value.trim(),
+    gst_number: document.getElementById('ns_gst').value.trim(),
+    state: document.getElementById('ns_state').value.trim(),
+    address: document.getElementById('ns_address').value.trim(),
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Supplier added! ✅');
+  showAdminTab('suppliers');
+}
+
+function editSupplier(supplierId) {
+  const s = (window._allSuppliers || []).find(s => s.id === supplierId);
+  if (!s) return;
+  const form = document.getElementById('add_supplier_form');
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-blue-200">
+      <h3 class="font-bold text-blue-700 mb-3">Edit Supplier</h3>
+      <div class="space-y-2">
+        <input id="es_name" value="${s.name}" placeholder="Company Name *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="es_phone" value="${s.phone || ''}" placeholder="Phone Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="es_gst" value="${s.gst_number || ''}" placeholder="GST Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="es_state" value="${s.state || ''}" placeholder="State" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <textarea id="es_address" placeholder="Address" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm">${s.address || ''}</textarea>
+        <button onclick="saveEditSupplier('${s.id}')" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
+      </div>
+    </div>`;
+}
+
+async function saveEditSupplier(supplierId) {
+  const name = document.getElementById('es_name').value.trim();
+  if (!name) { alert('Company name is required!'); return; }
+  const { error } = await db.from('suppliers').update({
+    name,
+    phone: document.getElementById('es_phone').value.trim(),
+    gst_number: document.getElementById('es_gst').value.trim(),
+    state: document.getElementById('es_state').value.trim(),
+    address: document.getElementById('es_address').value.trim(),
+  }).eq('id', supplierId);
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Supplier updated! ✅');
+  showAdminTab('suppliers');
+}
+
+async function deleteSupplier(supplierId) {
+  if (!confirm('Delete this supplier? This cannot be undone.')) return;
+  await db.from('supplier_ledger').delete().eq('supplier_id', supplierId);
+  await db.from('suppliers').delete().eq('id', supplierId);
+  alert('Supplier deleted!');
+  showAdminTab('suppliers');
+}
+
+async function toggleSupplierDetail(supplierId) {
+  const panel = document.getElementById('supplier_detail_' + supplierId);
+  if (!panel) return;
+  if (!panel.classList.contains('hidden')) { panel.classList.add('hidden'); panel.innerHTML = ''; return; }
+  panel.classList.remove('hidden');
+  await refreshSupplierDetail(supplierId);
+}
+
+async function refreshSupplierDetail(supplierId) {
+  const panel = document.getElementById('supplier_detail_' + supplierId);
+  if (!panel) return;
+  panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
+  const { data: ledger } = await db.from('supplier_ledger').select('*').eq('supplier_id', supplierId).order('created_at', { ascending: true });
+  let runningBalance = 0;
+  const rows = (ledger || []).map(entry => {
+    if (entry.type === 'debit') runningBalance += entry.amount;
+    else runningBalance -= entry.amount;
+    const date = new Date(entry.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const isDebit = entry.type === 'debit';
+    return { date, isDebit, amount: entry.amount, runningBalance, entryId: entry.id, note: (entry.note || '').replace(/'/g, '') };
+  });
+  const totalDebit = rows.filter(r => r.isDebit).reduce((s, r) => s + r.amount, 0);
+  const totalCredit = rows.filter(r => !r.isDebit).reduce((s, r) => s + r.amount, 0);
+  const closing = rows.length > 0 ? rows[rows.length - 1].runningBalance : 0;
+  panel.innerHTML = `<div class="border-t pt-4">
+    <div class="font-bold text-gray-700 mb-3">📄 Supplier Statement (${rows.length} entries)</div>
+    <div class="overflow-x-auto rounded-xl border border-gray-200">
+      <table class="w-full text-xs border-collapse">
+        <thead><tr class="bg-green-700 text-white">
+          <th class="px-2 py-2 text-left">Date</th>
+          <th class="px-2 py-2 text-left">Note</th>
+          <th class="px-2 py-2 text-right text-red-200">Debit</th>
+          <th class="px-2 py-2 text-right text-green-200">Credit</th>
+          <th class="px-2 py-2 text-right">Balance</th>
+          <th class="px-2 py-2 text-center">Edit</th>
+        </tr></thead>
+        <tbody>
+          ${rows.length === 0 ? '<tr><td colspan="6" class="text-center py-6 text-gray-400">No entries yet</td></tr>' :
+            rows.map((row, i) => `<tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-100">
+              <td class="px-2 py-2 text-gray-500 whitespace-nowrap">${row.date}</td>
+              <td class="px-2 py-2 text-gray-700">${row.note}</td>
+              <td class="px-2 py-2 text-right font-semibold ${row.isDebit ? 'text-red-600' : 'text-gray-300'}">${row.isDebit ? row.amount.toLocaleString('en-IN') : '—'}</td>
+              <td class="px-2 py-2 text-right font-semibold ${!row.isDebit ? 'text-green-600' : 'text-gray-300'}">${!row.isDebit ? row.amount.toLocaleString('en-IN') : '—'}</td>
+              <td class="px-2 py-2 text-right font-bold whitespace-nowrap ${row.runningBalance > 0 ? 'text-red-500' : 'text-green-600'}">${Math.abs(row.runningBalance).toLocaleString('en-IN')} <span class="text-gray-400 font-normal">${row.runningBalance > 0 ? 'Dr' : 'Cr'}</span></td>
+              <td class="px-2 py-2 text-center whitespace-nowrap">
+                <button onclick="deleteSupplierEntry('${row.entryId}','${supplierId}')" class="text-red-400">🗑</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+        <tfoot><tr class="bg-gray-800 text-white font-bold text-xs">
+          <td colspan="2" class="px-2 py-2">Closing Balance</td>
+          <td class="px-2 py-2 text-right text-red-300">${totalDebit.toLocaleString('en-IN')}</td>
+          <td class="px-2 py-2 text-right text-green-300">${totalCredit.toLocaleString('en-IN')}</td>
+          <td class="px-2 py-2 text-right ${closing > 0 ? 'text-red-300' : 'text-green-300'}">${Math.abs(closing).toLocaleString('en-IN')} <span class="font-normal">${closing > 0 ? 'Dr' : 'Cr'}</span></td>
+          <td></td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>`;
+}
+
+async function recordSupplierPayment(supplierId, supplierName, balance) {
+  const amount = prompt('Record payment to ' + supplierName + '\nCurrent balance you owe: ₹' + balance + '\n\nEnter amount paid:');
+  if (!amount || isNaN(amount)) return;
+  const note = prompt('Add a note (optional):') || 'Payment made';
+  await db.from('supplier_ledger').insert({ supplier_id: supplierId, amount: parseFloat(amount), type: 'credit', note });
+  alert('Payment of ₹' + amount + ' recorded! ✅');
+  showAdminTab('suppliers');
+}
+
+async function deleteSupplierEntry(entryId, supplierId) {
+  if (!confirm('Delete this entry?')) return;
+  await db.from('supplier_ledger').delete().eq('id', entryId);
+  await refreshSupplierDetail(supplierId);
+}
+
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
