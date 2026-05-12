@@ -1064,7 +1064,241 @@ function filterAdminProducts() {
     card.style.display = (name.includes(search) || company.includes(search)) ? 'block' : 'none';
   });
 }
+async function showCreateManualOrder() {
+  const form = document.getElementById('manual_order_form');
+  if (!form) return;
+  if (form.innerHTML !== '') { form.innerHTML = ''; return; }
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').eq('is_available', true).order('name');
+  const allProducts = products || [];
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-green-200">
+      <h3 class="font-bold text-green-700 mb-3">📋 New Manual Order</h3>
+      <div class="space-y-2 mb-3">
+        <input id="mo_name" placeholder="Customer Name *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="mo_phone" type="tel" placeholder="Phone Number *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="mo_gst" placeholder="GST Number (optional)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <textarea id="mo_address" placeholder="Address *" rows="2" class="w-full border rounded-lg px-3 py-2 text-sm"></textarea>
+        <input id="mo_transport" placeholder="Transport Name (optional)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <select id="mo_payment" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="cash">Cash</option>
+          <option value="credit">Credit / Pay Later</option>
+        </select>
+      </div>
+      <div class="font-semibold text-sm mb-2 text-gray-700">Items</div>
+      <div id="mo_items_list"></div>
+      <div class="flex gap-2 mt-2 mb-3">
+        <select id="mo_product_select" class="flex-1 border rounded-lg px-2 py-2 text-sm">
+          <option value="">-- Select Product --</option>
+          ${allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+        <button onclick="moSelectProduct()" class="bg-green-700 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+      </div>
+      <div id="mo_variant_row" class="hidden flex gap-2 mb-3">
+        <select id="mo_variant_select" class="flex-1 border rounded-lg px-2 py-2 text-sm"></select>
+        <select id="mo_pkg_select" class="flex-1 border rounded-lg px-2 py-2 text-sm"></select>
+        <input id="mo_qty" type="number" value="1" min="1" class="w-16 border rounded-lg px-2 py-2 text-sm" />
+        <button onclick="moAddItem()" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm">✓</button>
+      </div>
+      <div id="mo_total" class="text-right font-bold text-green-700 mb-3">Total: ₹0</div>
+      <button onclick="saveManualOrder()" class="w-full bg-green-700 text-white py-2 rounded-xl font-bold">Place Order 🌿</button>
+    </div>`;
+  window._moItems = [];
+  window._moProducts = allProducts;
+}
+
+function moSelectProduct() {
+  const pid = document.getElementById('mo_product_select').value;
+  if (!pid) return;
+  const product = (window._moProducts || []).find(p => p.id === pid);
+  if (!product) return;
+  const variantRow = document.getElementById('mo_variant_row');
+  const variantSel = document.getElementById('mo_variant_select');
+  const pkgSel = document.getElementById('mo_pkg_select');
+  variantRow.classList.remove('hidden');
+  variantSel.innerHTML = (product.product_variants || []).map(v => `<option value="${v.id}">${v.bag_size}</option>`).join('');
+  variantSel.onchange = () => {
+    const vid = variantSel.value;
+    const variant = (product.product_variants || []).find(v => v.id === vid);
+    pkgSel.innerHTML = (variant?.product_packagings || []).map(pk => `<option value="${pk.id}">${pk.box_label} — ₹${pk.price_per_box}</option>`).join('');
+  };
+  variantSel.onchange();
+}
+
+function moAddItem() {
+  const pid = document.getElementById('mo_product_select').value;
+  const vid = document.getElementById('mo_variant_select').value;
+  const pkgId = document.getElementById('mo_pkg_select').value;
+  const qty = parseInt(document.getElementById('mo_qty').value) || 1;
+  const product = (window._moProducts || []).find(p => p.id === pid);
+  const variant = (product?.product_variants || []).find(v => v.id === vid);
+  const pkg = (variant?.product_packagings || []).find(pk => pk.id === pkgId);
+  if (!product || !variant || !pkg) return;
+  window._moItems = window._moItems || [];
+  window._moItems.push({ productId: pid, variantId: vid, pkgId, name: product.name, size: variant.bag_size, boxLabel: pkg.box_label, pricePerBox: pkg.price_per_box, pricePerUnit: pkg.price_per_unit, qty });
+  moRenderItems();
+  document.getElementById('mo_variant_row').classList.add('hidden');
+  document.getElementById('mo_product_select').value = '';
+}
+
+function moRenderItems() {
+  const items = window._moItems || [];
+  const list = document.getElementById('mo_items_list');
+  if (!list) return;
+  let total = 0;
+  list.innerHTML = items.map((item, i) => {
+    total += item.pricePerBox * item.qty;
+    return `<div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 mb-1 text-sm">
+      <div><span class="font-medium">${item.name}</span> <span class="text-gray-500">${item.size} · ${item.boxLabel}</span> x${item.qty}</div>
+      <div class="flex items-center gap-2"><span class="font-bold text-green-700">₹${item.pricePerBox * item.qty}</span>
+      <button onclick="window._moItems.splice(${i},1); moRenderItems();" class="text-red-400 text-xs">✕</button></div>
+    </div>`;
+  }).join('');
+  const totalEl = document.getElementById('mo_total');
+  if (totalEl) totalEl.textContent = 'Total: ₹' + total;
+}
+
+async function saveManualOrder() {
+  const name = document.getElementById('mo_name').value.trim();
+  const phone = document.getElementById('mo_phone').value.trim();
+  const address = document.getElementById('mo_address').value.trim();
+  const gst = document.getElementById('mo_gst').value.trim();
+  const transport = document.getElementById('mo_transport').value.trim();
+  const payment = document.getElementById('mo_payment').value;
+  const items = window._moItems || [];
+  if (!name || !phone || !address) { alert('Name, Phone and Address are required!'); return; }
+  if (items.length === 0) { alert('Add at least one item!'); return; }
+  const total = items.reduce((s, i) => s + i.pricePerBox * i.qty, 0);
+  try {
+    const { data: customer } = await db.from('customers')
+      .upsert({ name, phone, address, gst_number: gst, transport_name: transport }, { onConflict: 'phone' })
+      .select().single();
+    const { data: order } = await db.from('orders').insert({
+      customer_id: customer.id, total_amount: total,
+      payment_method: payment, payment_status: 'pending', order_status: 'pending',
+      gst_number: gst, shipping_address: address, transport_name: transport,
+    }).select().single();
+    await db.from('order_items').insert(items.map(i => ({
+      order_id: order.id, product_id: i.productId, variant_id: i.variantId,
+      quantity: i.qty, unit_price: i.pricePerBox, total_price: i.pricePerBox * i.qty,
+      product_name: i.name, variant_name: i.size,
+    })));
+    for (const item of items) {
+      const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', item.pkgId).single();
+      if (pkg) await db.from('product_packagings').update({ stock_quantity: Math.max(0, pkg.stock_quantity - item.qty) }).eq('id', item.pkgId);
+    }
+    await db.from('credit_ledger').insert({
+      customer_id: customer.id, order_id: order.id,
+      amount: total, type: 'debit',
+      note: payment === 'cash' ? 'Cash order (manual)' : 'Credit order (manual)',
+    });
+    alert('Manual order placed! ✅\nOrder ID: ' + order.id.substring(0,8).toUpperCase());
+    showAdminTab('orders');
+  } catch (err) { alert('Error: ' + err.message); console.error(err); }
+}
+
+async function showAddItemsToOrder(orderId) {
+  const existing = document.getElementById('add_items_' + orderId);
+  if (existing) { existing.remove(); return; }
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').eq('is_available', true).order('name');
+  const { data: order } = await db.from('orders').select('*, customers(*)').eq('id', orderId).single();
+  const allProducts = products || [];
+  const panel = document.createElement('div');
+  panel.id = 'add_items_' + orderId;
+  panel.className = 'mt-3 bg-purple-50 border border-purple-200 rounded-xl p-3';
+  panel.innerHTML = `
+    <div class="font-semibold text-purple-700 text-sm mb-2">➕ Add Items to Order</div>
+    <div id="ai_items_list_${orderId}"></div>
+    <div class="flex gap-2 mb-2">
+      <select id="ai_product_${orderId}" class="flex-1 border rounded-lg px-2 py-1.5 text-sm">
+        <option value="">-- Select Product --</option>
+        ${allProducts.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+      </select>
+      <button onclick="aiSelectProduct('${orderId}')" class="bg-purple-600 text-white px-3 py-1 rounded-lg text-sm">Add</button>
+    </div>
+    <div id="ai_variant_row_${orderId}" class="hidden flex gap-2 mb-2">
+      <select id="ai_variant_${orderId}" class="flex-1 border rounded-lg px-2 py-1.5 text-sm"></select>
+      <select id="ai_pkg_${orderId}" class="flex-1 border rounded-lg px-2 py-1.5 text-sm"></select>
+      <input id="ai_qty_${orderId}" type="number" value="1" min="1" class="w-14 border rounded-lg px-2 py-1.5 text-sm" />
+      <button onclick="aiConfirmItem('${orderId}')" class="bg-green-600 text-white px-3 py-1 rounded-lg text-sm">✓</button>
+    </div>
+    <button onclick="aiSaveItems('${orderId}', '${order?.customer_id}')" class="w-full bg-purple-600 text-white py-1.5 rounded-lg text-sm font-bold mt-1">Save & Update Order</button>`;
+  window['_aiItems_' + orderId] = [];
+  window['_aiProducts_' + orderId] = allProducts;
+  const orderCard = document.getElementById('add_items_' + orderId)?.parentElement || document.querySelector(`[data-order-id="${orderId}"]`);
+  // Insert after the order card — find by button proximity
+  const btn = document.querySelector(`button[onclick="showAddItemsToOrder('${orderId}')"]`);
+  if (btn) {
+    const card = btn.closest('.bg-white');
+    if (card) card.after(panel);
+    else document.getElementById('admin_content').prepend(panel);
+  }
+}
+
+function aiSelectProduct(orderId) {
+  const pid = document.getElementById('ai_product_' + orderId).value;
+  if (!pid) return;
+  const product = (window['_aiProducts_' + orderId] || []).find(p => p.id === pid);
+  if (!product) return;
+  const variantRow = document.getElementById('ai_variant_row_' + orderId);
+  const variantSel = document.getElementById('ai_variant_' + orderId);
+  const pkgSel = document.getElementById('ai_pkg_' + orderId);
+  variantRow.classList.remove('hidden');
+  variantSel.innerHTML = (product.product_variants || []).map(v => `<option value="${v.id}">${v.bag_size}</option>`).join('');
+  variantSel.onchange = () => {
+    const vid = variantSel.value;
+    const variant = (product.product_variants || []).find(v => v.id === vid);
+    pkgSel.innerHTML = (variant?.product_packagings || []).map(pk => `<option value="${pk.id}">${pk.box_label} — ₹${pk.price_per_box}</option>`).join('');
+  };
+  variantSel.onchange();
+}
+
+function aiConfirmItem(orderId) {
+  const pid = document.getElementById('ai_product_' + orderId).value;
+  const vid = document.getElementById('ai_variant_' + orderId).value;
+  const pkgId = document.getElementById('ai_pkg_' + orderId).value;
+  const qty = parseInt(document.getElementById('ai_qty_' + orderId).value) || 1;
+  const product = (window['_aiProducts_' + orderId] || []).find(p => p.id === pid);
+  const variant = (product?.product_variants || []).find(v => v.id === vid);
+  const pkg = (variant?.product_packagings || []).find(pk => pk.id === pkgId);
+  if (!product || !variant || !pkg) return;
+  window['_aiItems_' + orderId] = window['_aiItems_' + orderId] || [];
+  window['_aiItems_' + orderId].push({ productId: pid, variantId: vid, pkgId, name: product.name, size: variant.bag_size, boxLabel: pkg.box_label, pricePerBox: pkg.price_per_box, qty });
+  const list = document.getElementById('ai_items_list_' + orderId);
+  if (list) list.innerHTML = (window['_aiItems_' + orderId]).map(i => `<div class="text-xs bg-white rounded px-2 py-1 mb-1 text-gray-700">${i.name} ${i.size} · ${i.boxLabel} x${i.qty} = ₹${i.pricePerBox * i.qty}</div>`).join('');
+  document.getElementById('ai_variant_row_' + orderId).classList.add('hidden');
+  document.getElementById('ai_product_' + orderId).value = '';
+}
+
+async function aiSaveItems(orderId, customerId) {
+  const items = window['_aiItems_' + orderId] || [];
+  if (items.length === 0) { alert('No items added!'); return; }
+  const addedTotal = items.reduce((s, i) => s + i.pricePerBox * i.qty, 0);
+  try {
+    await db.from('order_items').insert(items.map(i => ({
+      order_id: orderId, product_id: i.productId, variant_id: i.variantId,
+      quantity: i.qty, unit_price: i.pricePerBox, total_price: i.pricePerBox * i.qty,
+      product_name: i.name, variant_name: i.size,
+    })));
+    const { data: currentOrder } = await db.from('orders').select('total_amount').eq('id', orderId).single();
+    const newTotal = (currentOrder?.total_amount || 0) + addedTotal;
+    await db.from('orders').update({ total_amount: newTotal }).eq('id', orderId);
+    for (const item of items) {
+      const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', item.pkgId).single();
+      if (pkg) await db.from('product_packagings').update({ stock_quantity: Math.max(0, pkg.stock_quantity - item.qty) }).eq('id', item.pkgId);
+    }
+    await db.from('credit_ledger').insert({
+      customer_id: customerId, order_id: orderId,
+      amount: addedTotal, type: 'debit', note: 'Items added to existing order',
+    });
+    alert('Items added! ✅ Order total updated to ₹' + newTotal);
+    showAdminTab('orders');
+  } catch (err) { alert('Error: ' + err.message); console.error(err); }
+}
+
 function navigate(page) { state.page = page; render(); }
+EOF
+echo "Written"</parameter>
+<parameter name="description">Write the new functions to a temp file to show the user</parameter>
 function attachEvents() {}
 
 if (window.location.hash === '#admin') state.page = 'admin';
