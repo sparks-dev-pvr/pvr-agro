@@ -572,7 +572,162 @@ async function showAdminTab(tab) {
       </div>`;
     return;
 
-  } else if (tab === 'credit') {
+  } else if (tab === 'purchases') {
+    const { data: purchases } = await db.from('purchases').select('*').order('created_at', { ascending: false });
+    const { data: purchaseItems } = await db.from('purchase_items').select('*');
+    window._allPurchases = purchases || [];
+    window._allPurchaseItems = purchaseItems || [];
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Purchases</h2>
+        <button onclick="showAddPurchase()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ New Purchase</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="purchase_search" type="text" placeholder="Search by supplier name..."
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+          oninput="filterPurchases()" />
+      </div>
+      <div id="add_purchase_form"></div>
+      <div class="space-y-3" id="purchases_list">
+        ${(purchases || []).map(p => {
+          const items = (purchaseItems || []).filter(i => i.purchase_id === p.id);
+          return `
+          <div class="bg-white rounded-xl shadow p-4 purchase-card" data-supplier="${(p.supplier_name||'').toLowerCase()}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-lg">${p.supplier_name || 'Unknown'}</div>
+                <div class="text-sm text-gray-500">Bill: ${p.bill_number || '-'} · ${p.bill_date || ''}</div>
+                <div class="text-xs text-gray-400">${items.map(i => i.product_name + ' x' + i.quantity).join(', ')}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-green-700">₹${(p.total_amount||0).toLocaleString('en-IN')}</div>
+                <div class="text-xs text-blue-600">${p.payment_method || ''}</div>
+                <div class="text-xs ${p.balance > 0 ? 'text-red-500' : 'text-green-600'}">${p.balance > 0 ? 'Due: ₹'+p.balance : 'Paid ✅'}</div>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-3 flex-wrap">
+              <button onclick="generatePurchaseBill('${p.id}')" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-lg">🧾 Bill</button>
+              <button onclick="editPurchase('${p.id}')" class="bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-lg">✏️ Edit</button>
+              <button onclick="deletePurchase('${p.id}')" class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">🗑 Delete</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'expenses') {
+    const { data: expenses } = await db.from('expenses').select('*').order('expense_date', { ascending: false });
+    window._allExpenses = expenses || [];
+    const totalCash = (expenses||[]).filter(e=>e.paid_via==='cash').reduce((s,e)=>s+e.amount,0);
+    const totalBank = (expenses||[]).filter(e=>e.paid_via==='bank').reduce((s,e)=>s+e.amount,0);
+    const total = (expenses||[]).reduce((s,e)=>s+e.amount,0);
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Expenses</h2>
+        <button onclick="showAddExpense()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Expense</button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">Total</div>
+          <div class="font-bold text-red-500">₹${total.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">Cash</div>
+          <div class="font-bold text-orange-500">₹${totalCash.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">Bank</div>
+          <div class="font-bold text-blue-500">₹${totalBank.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div class="flex gap-2 mb-4 flex-wrap">
+        <button onclick="showExpenseReport('monthly')" class="bg-purple-100 text-purple-700 text-xs px-3 py-1 rounded-lg">📊 Monthly Report</button>
+        <button onclick="showExpenseReport('category')" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-lg">📂 Category Report</button>
+        <button onclick="showExpenseReport('cashflow')" class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-lg">💰 Cash Flow</button>
+      </div>
+      <div id="expense_report_panel" class="mb-4"></div>
+      <div id="add_expense_form"></div>
+      <div class="space-y-3">
+        ${(expenses||[]).map(e => `
+          <div class="bg-white rounded-xl shadow p-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold">${e.category || 'Expense'}</div>
+                <div class="text-sm text-gray-500">${e.description || ''}</div>
+                <div class="text-xs text-gray-400">${e.expense_date || ''} · via ${e.paid_via}</div>
+                ${e.notes ? `<div class="text-xs text-gray-400">${e.notes}</div>` : ''}
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-red-500">₹${(e.amount||0).toLocaleString('en-IN')}</div>
+                <div class="flex gap-1 mt-2">
+                  <button onclick="editExpense('${e.id}')" class="text-blue-400 text-xs">✏️</button>
+                  <button onclick="deleteExpense('${e.id}')" class="text-red-400 text-xs">🗑</button>
+                </div>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'cashbank') {
+    const cbPass = prompt('Enter Cash & Bank password:');
+    if (cbPass !== '74820406') { alert('Wrong password!'); return; }
+    const { data: ledger } = await db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false });
+    const cashLedger = (ledger||[]).filter(l=>l.account_type==='cash');
+    const bankLedger = (ledger||[]).filter(l=>l.account_type==='bank');
+    const cashBalance = cashLedger.length > 0 ? cashLedger[0].running_balance : 0;
+    const bankBalance = bankLedger.length > 0 ? bankLedger[0].running_balance : 0;
+    content.innerHTML = `
+      <h2 class="text-xl font-bold mb-4">Cash & Bank</h2>
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow p-4 text-center border-2 border-orange-200">
+          <div class="text-sm text-gray-500 mb-1">💵 Cash in Hand</div>
+          <div class="text-2xl font-bold text-orange-600">₹${cashBalance.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 text-center border-2 border-blue-200">
+          <div class="text-sm text-gray-500 mb-1">🏦 Bank Balance</div>
+          <div class="text-2xl font-bold text-blue-600">₹${bankBalance.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Manual Entry</div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select id="cb_account" class="border rounded-lg px-3 py-2 text-sm">
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+          </select>
+          <select id="cb_type" class="border rounded-lg px-3 py-2 text-sm">
+            <option value="in">Money In (+)</option>
+            <option value="out">Money Out (-)</option>
+          </select>
+        </div>
+        <input id="cb_amount" type="number" placeholder="Amount ₹" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
+        <input id="cb_note" placeholder="Note" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
+        <button onclick="saveCashBankEntry()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Save Entry</button>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Transfer Cash ↔ Bank</div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select id="tr_from" class="border rounded-lg px-3 py-2 text-sm">
+            <option value="cash">From Cash</option>
+            <option value="bank">From Bank</option>
+          </select>
+          <input id="tr_amount" type="number" placeholder="Amount ₹" class="border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <button onclick="saveTransfer()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Transfer</button>
+      </div>
+      <div class="space-y-3">
+        <div class="font-bold text-gray-700">📒 Ledger History</div>
+        ${(ledger||[]).map(l => `
+          <div class="bg-white rounded-xl shadow p-3 flex justify-between items-center">
+            <div>
+              <div class="font-medium text-sm">${l.account_type === 'cash' ? '💵 Cash' : '🏦 Bank'} · ${l.entry_type === 'in' ? '➕' : '➖'} ₹${(l.amount||0).toLocaleString('en-IN')}</div>
+              <div class="text-xs text-gray-400">${l.note || ''} · ${new Date(l.created_at).toLocaleDateString('en-IN')}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-bold ${l.entry_type==='in'?'text-green-600':'text-red-500'}">${l.entry_type==='in'?'+':'-'}₹${(l.amount||0).toLocaleString('en-IN')}</div>
+              <div class="text-xs text-gray-400">Bal: ₹${(l.running_balance||0).toLocaleString('en-IN')}</div>
+              <button onclick="deleteCashBankEntry('${l.id}'
     const { data: credits } = await db.from('credit_summary').select('*');
     content.innerHTML = `
       <h2 class="text-xl font-bold mb-4">Credit Ledger</h2>
