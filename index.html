@@ -657,7 +657,11 @@ function renderOrdersTab(activeStatus) {
   }
 
   content.innerHTML = `
-    <h2 class="text-xl font-bold mb-3">Orders</h2>
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold">Orders</h2>
+      <button onclick="showCreateManualOrder()" class="bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+ New Order</button>
+    </div>
+    <div id="manual_order_form"></div>
     <div class="flex gap-2 mb-3">
       <input id="order_search" type="text" placeholder="Search by name, phone or product..."
         class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
