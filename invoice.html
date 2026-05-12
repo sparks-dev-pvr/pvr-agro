@@ -469,6 +469,8 @@ function getRows() {
       qty:  parseFloat(document.getElementById('it_qty_' + r)?.value) || 0,
       price: parseFloat(document.getElementById('it_price_' + r)?.value) || 0,
       gst:  parseFloat(document.getElementById('it_gst_' + r)?.value) || 0,
+      disPct: parseFloat(document.getElementById('it_dis_pct_' + r)?.value) || 0,
+      disAmt: parseFloat(document.getElementById('it_dis_amt_' + r)?.value) || 0,,
     };
   });
 }
