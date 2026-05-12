@@ -438,7 +438,9 @@ function addItemRow(data = {}) {
     <td><input class="ef ef-center" id="it_size_${r}" value="${data.size||''}" placeholder="1L" /></td>
     <td><input class="ef ef-center ef-num" id="it_qty_${r}" type="number" value="${data.qty||1}" min="0" oninput="recalcAll()" style="width:50px" /></td>
     <td><input class="ef ef-center" id="it_unit_${r}" value="${data.unit||'Pcs'}" style="width:36px" /></td>
-    <td><input class="ef ef-right ef-num" id="it_price_${r}" type="number" value="${data.price||0}" oninput="recalcAll()" style="width:70px" /></td>
+    <td><input class="ef ef-right ef-num" id="it_price_${r}" type="number" value="${data.price||0}" oninput="recalcRowDiscount('${r}','pct')" style="width:70px" /></td>
+    <td><input class="ef ef-center ef-num" id="it_dis_pct_${r}" type="number" value="0" min="0" max="100" oninput="recalcRowDiscount('${r}','pct')" style="width:55px" /></td>
+    <td><input class="ef ef-center ef-num" id="it_dis_amt_${r}" type="number" value="0" min="0" oninput="recalcRowDiscount('${r}','amt')" style="width:60px" /></td>
     <td>
       <select class="gst-select" id="it_gst_${r}" onchange="recalcAll()">
         ${[0,5,12,18,28].map(g=>`<option value="${g}" ${(data.gst||18)==g?'selected':''}>${g}%</option>`).join('')}
