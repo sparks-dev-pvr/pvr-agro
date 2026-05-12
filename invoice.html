@@ -500,7 +500,8 @@ function recalcAll() {
   // Per-row amounts
   rows.forEach(row => {
     const baseAmt = row.qty * row.price;
-    const discounted = baseAmt - row.disAmt;
+    const disAmt = row.disPct > 0 ? (baseAmt * row.disPct / 100) : row.disAmt;
+    const discounted = baseAmt - disAmt;
     const gstAmt = discounted * row.gst / 100;
     const amt = discounted + gstAmt;
     totalQty += row.qty;
