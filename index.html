@@ -1500,6 +1500,415 @@ async function aiSaveItems(orderId, customerId) {
   } catch (err) { alert('Error: ' + err.message); console.error(err); }
 }
 
+function filterPurchases() {
+  const search = document.getElementById('purchase_search')?.value.toLowerCase() || '';
+  document.querySelectorAll('.purchase-card').forEach(card => {
+    card.style.display = card.dataset.supplier.includes(search) ? 'block' : 'none';
+  });
+}
+
+function showAddPurchase() {
+  const form = document.getElementById('add_purchase_form');
+  if (form.innerHTML !== '') { form.innerHTML = ''; return; }
+  const suppliers = window._allSuppliers || [];
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-green-200">
+      <h3 class="font-bold text-green-700 mb-3">New Purchase</h3>
+      <div class="space-y-2 mb-3">
+        <select id="np_supplier" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- Select Supplier --</option>
+          ${suppliers.map(s => `<option value="${s.id}" data-name="${s.name}">${s.name}</option>`).join('')}
+        </select>
+        <input id="np_bill_no" placeholder="Bill Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="np_bill_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm" value="${new Date().toISOString().split('T')[0]}" />
+        <input id="np_place" placeholder="Place of Supply" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="np_transport" placeholder="Transport Name" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="np_delivery" placeholder="Delivery Location" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <select id="np_payment" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="credit">Credit</option>
+          <option value="cash">Cash</option>
+          <option value="bank">Bank</option>
+        </select>
+        <input id="np_paid" type="number" placeholder="Amount Paid ₹ (0 if full credit)" class="w-full border rounded-lg px-3 py-2 text-sm" value="0" />
+        <input id="np_transport_charges" type="number" placeholder="Transport Charges ₹" class="w-full border rounded-lg px-3 py-2 text-sm" value="0" />
+      </div>
+      <div class="font-semibold text-sm mb-2">Items</div>
+      <div id="np_items_list" class="mb-2"></div>
+      <div class="border rounded-lg p-3 bg-gray-50 mb-3">
+        <div class="grid grid-cols-2 gap-2">
+          <input id="ni_product" placeholder="Product Name *" class="border rounded px-2 py-1 text-xs col-span-2" />
+          <input id="ni_hsn" placeholder="HSN Code" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_batch" placeholder="Batch No" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_exp" placeholder="Exp Date" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_mfg" placeholder="Mfg Date" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_size" placeholder="Size" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_qty" type="number" placeholder="Quantity *" class="border rounded px-2 py-1 text-xs" />
+          <select id="ni_unit" class="border rounded px-2 py-1 text-xs">
+            <option>Pcs</option><option>Box</option><option>Kg</option><option>L</option><option>ml</option>
+          </select>
+          <input id="ni_price" type="number" placeholder="Price/Unit ₹ *" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_gst" type="number" placeholder="GST %" class="border rounded px-2 py-1 text-xs" value="18" />
+        </div>
+        <button onclick="addPurchaseItem()" class="mt-2 w-full bg-green-700 text-white py-1 rounded-lg text-xs font-bold">+ Add Item</button>
+      </div>
+      <div id="np_total" class="text-right font-bold text-green-700 mb-3">Sub Total: ₹0</div>
+      <button onclick="saveNewPurchase()" class="w-full bg-green-700 text-white py-2 rounded-xl font-bold">Save Purchase</button>
+    </div>`;
+  window._npItems = [];
+}
+
+function addPurchaseItem() {
+  const product = document.getElementById('ni_product').value.trim();
+  const qty = parseFloat(document.getElementById('ni_qty').value) || 0;
+  const price = parseFloat(document.getElementById('ni_price').value) || 0;
+  if (!product || !qty || !price) { alert('Product name, quantity and price are required!'); return; }
+  const gst = parseFloat(document.getElementById('ni_gst').value) || 0;
+  const total = qty * price * (1 + gst / 100);
+  window._npItems = window._npItems || [];
+  window._npItems.push({
+    product_name: product,
+    hsn_code: document.getElementById('ni_hsn').value.trim(),
+    batch_number: document.getElementById('ni_batch').value.trim(),
+    exp_date: document.getElementById('ni_exp').value.trim(),
+    mfg_date: document.getElementById('ni_mfg').value.trim(),
+    size: document.getElementById('ni_size').value.trim(),
+    quantity: qty,
+    unit: document.getElementById('ni_unit').value,
+    unit_price: price,
+    gst_percent: gst,
+    total_price: total,
+  });
+  renderPurchaseItems();
+  ['ni_product','ni_hsn','ni_batch','ni_exp','ni_mfg','ni_size','ni_qty','ni_price'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('ni_gst').value = '18';
+}
+
+function renderPurchaseItems() {
+  const items = window._npItems || [];
+  const list = document.getElementById('np_items_list');
+  if (!list) return;
+  let subTotal = 0;
+  list.innerHTML = items.map((item, i) => {
+    subTotal += item.total_price;
+    return `<div class="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 mb-1 text-xs">
+      <div><span class="font-medium">${item.product_name}</span> · ${item.quantity} ${item.unit} · ₹${item.unit_price}/unit · GST ${item.gst_percent}%</div>
+      <div class="flex items-center gap-2"><span class="font-bold text-green-700">₹${item.total_price.toFixed(2)}</span>
+      <button onclick="window._npItems.splice(${i},1); renderPurchaseItems();" class="text-red-400">✕</button></div>
+    </div>`;
+  }).join('');
+  const totalEl = document.getElementById('np_total');
+  if (totalEl) totalEl.textContent = 'Sub Total: ₹' + subTotal.toFixed(2);
+}
+
+async function saveNewPurchase() {
+  const supplierId = document.getElementById('np_supplier').value;
+  const supplierEl = document.getElementById('np_supplier');
+  const supplierName = supplierId ? supplierEl.options[supplierEl.selectedIndex].dataset.name : '';
+  const items = window._npItems || [];
+  if (!supplierId) { alert('Please select a supplier!'); return; }
+  if (items.length === 0) { alert('Add at least one item!'); return; }
+  const subTotal = items.reduce((s, i) => s + i.total_price, 0);
+  const transportCharges = parseFloat(document.getElementById('np_transport_charges').value) || 0;
+  const totalAmount = subTotal + transportCharges;
+  const paidAmount = parseFloat(document.getElementById('np_paid').value) || 0;
+  const balance = totalAmount - paidAmount;
+  const { data: purchase, error } = await db.from('purchases').insert({
+    supplier_id: supplierId,
+    supplier_name: supplierName,
+    bill_number: document.getElementById('np_bill_no').value.trim(),
+    bill_date: document.getElementById('np_bill_date').value,
+    place_of_supply: document.getElementById('np_place').value.trim(),
+    transport_name: document.getElementById('np_transport').value.trim(),
+    delivery_location: document.getElementById('np_delivery').value.trim(),
+    payment_method: document.getElementById('np_payment').value,
+    sub_total: subTotal,
+    transport_charges: transportCharges,
+    total_amount: totalAmount,
+    paid_amount: paidAmount,
+    balance: balance,
+  }).select().single();
+  if (error) { alert('Error: ' + error.message); return; }
+  await db.from('purchase_items').insert(items.map(i => ({ ...i, purchase_id: purchase.id })));
+  for (const item of items) {
+    const { data: variants } = await db.from('product_variants').select('id, product_id, bag_size, stock_quantity').ilike('bag_size', '%' + item.size + '%');
+    if (variants && variants.length > 0) {
+      const v = variants[0];
+      await db.from('product_variants').update({ stock_quantity: (v.stock_quantity || 0) + item.quantity }).eq('id', v.id);
+    }
+  }
+  await db.from('supplier_ledger').insert({ supplier_id: supplierId, purchase_id: purchase.id, amount: totalAmount, type: 'debit', note: 'Purchase bill: ' + (document.getElementById('np_bill_no').value.trim() || purchase.id.substring(0,8)) });
+  if (paidAmount > 0) {
+    await db.from('supplier_ledger').insert({ supplier_id: supplierId, purchase_id: purchase.id, amount: paidAmount, type: 'credit', note: 'Payment at time of purchase' });
+  }
+  alert('Purchase saved! ✅');
+  showAdminTab('purchases');
+}
+
+async function deletePurchase(purchaseId) {
+  if (!confirm('Delete this purchase? Stock will NOT be auto-reversed. Delete only if entered by mistake.')) return;
+  await db.from('purchase_items').delete().eq('purchase_id', purchaseId);
+  await db.from('supplier_ledger').delete().eq('purchase_id', purchaseId);
+  await db.from('purchases').delete().eq('id', purchaseId);
+  alert('Purchase deleted!');
+  showAdminTab('purchases');
+}
+
+async function editPurchase(purchaseId) {
+  const purchase = (window._allPurchases || []).find(p => p.id === purchaseId);
+  const items = (window._allPurchaseItems || []).filter(i => i.purchase_id === purchaseId);
+  if (!purchase) return;
+  const form = document.getElementById('add_purchase_form');
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-yellow-200">
+      <h3 class="font-bold text-yellow-700 mb-3">Edit Purchase — ${purchase.supplier_name}</h3>
+      <div class="space-y-2 mb-3">
+        <input id="ep_bill_no" value="${purchase.bill_number||''}" placeholder="Bill Number" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_bill_date" type="date" value="${purchase.bill_date||''}" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_place" value="${purchase.place_of_supply||''}" placeholder="Place of Supply" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_transport" value="${purchase.transport_name||''}" placeholder="Transport Name" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_delivery" value="${purchase.delivery_location||''}" placeholder="Delivery Location" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_transport_charges" type="number" value="${purchase.transport_charges||0}" placeholder="Transport Charges ₹" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ep_paid" type="number" value="${purchase.paid_amount||0}" placeholder="Amount Paid ₹" class="w-full border rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div class="font-semibold text-sm mb-2">Items</div>
+      <div class="space-y-2 mb-3">
+        ${items.map(item => `
+          <div class="border rounded-lg p-2 bg-gray-50 text-xs" id="epi_${item.id}">
+            <div class="grid grid-cols-2 gap-1 mb-1">
+              <input value="${item.product_name||''}" placeholder="Product *" class="border rounded px-2 py-1 col-span-2" id="epi_name_${item.id}" />
+              <input value="${item.hsn_code||''}" placeholder="HSN" class="border rounded px-2 py-1" id="epi_hsn_${item.id}" />
+              <input value="${item.batch_number||''}" placeholder="Batch No" class="border rounded px-2 py-1" id="epi_batch_${item.id}" />
+              <input value="${item.exp_date||''}" placeholder="Exp Date" class="border rounded px-2 py-1" id="epi_exp_${item.id}" />
+              <input value="${item.mfg_date||''}" placeholder="Mfg Date" class="border rounded px-2 py-1" id="epi_mfg_${item.id}" />
+              <input value="${item.size||''}" placeholder="Size" class="border rounded px-2 py-1" id="epi_size_${item.id}" />
+              <input type="number" value="${item.quantity||0}" placeholder="Qty" class="border rounded px-2 py-1" id="epi_qty_${item.id}" />
+              <input type="number" value="${item.unit_price||0}" placeholder="Price/unit" class="border rounded px-2 py-1" id="epi_price_${item.id}" />
+              <input type="number" value="${item.gst_percent||0}" placeholder="GST%" class="border rounded px-2 py-1" id="epi_gst_${item.id}" />
+            </div>
+            <button onclick="deletePurchaseItem('${item.id}','${purchaseId}')" class="text-red-400 text-xs">🗑 Delete Item</button>
+          </div>`).join('')}
+      </div>
+      <button onclick="saveEditPurchase('${purchaseId}')" class="w-full bg-yellow-600 text-white py-2 rounded-xl font-bold">Save Changes</button>
+    </div>`;
+}
+
+async function deletePurchaseItem(itemId, purchaseId) {
+  if (!confirm('Delete this item?')) return;
+  await db.from('purchase_items').delete().eq('id', itemId);
+  const el = document.getElementById('epi_' + itemId);
+  if (el) el.remove();
+}
+
+async function saveEditPurchase(purchaseId) {
+  const items = (window._allPurchaseItems || []).filter(i => i.purchase_id === purchaseId);
+  let subTotal = 0;
+  for (const item of items) {
+    const qty = parseFloat(document.getElementById('epi_qty_' + item.id)?.value) || 0;
+    const price = parseFloat(document.getElementById('epi_price_' + item.id)?.value) || 0;
+    const gst = parseFloat(document.getElementById('epi_gst_' + item.id)?.value) || 0;
+    const total = qty * price * (1 + gst / 100);
+    subTotal += total;
+    await db.from('purchase_items').update({
+      product_name: document.getElementById('epi_name_' + item.id)?.value,
+      hsn_code: document.getElementById('epi_hsn_' + item.id)?.value,
+      batch_number: document.getElementById('epi_batch_' + item.id)?.value,
+      exp_date: document.getElementById('epi_exp_' + item.id)?.value,
+      mfg_date: document.getElementById('epi_mfg_' + item.id)?.value,
+      size: document.getElementById('epi_size_' + item.id)?.value,
+      quantity: qty, unit_price: price, gst_percent: gst, total_price: total,
+    }).eq('id', item.id);
+  }
+  const transportCharges = parseFloat(document.getElementById('ep_transport_charges').value) || 0;
+  const paidAmount = parseFloat(document.getElementById('ep_paid').value) || 0;
+  const totalAmount = subTotal + transportCharges;
+  const balance = totalAmount - paidAmount;
+  await db.from('purchases').update({
+    bill_number: document.getElementById('ep_bill_no').value,
+    bill_date: document.getElementById('ep_bill_date').value,
+    place_of_supply: document.getElementById('ep_place').value,
+    transport_name: document.getElementById('ep_transport').value,
+    delivery_location: document.getElementById('ep_delivery').value,
+    transport_charges: transportCharges,
+    sub_total: subTotal,
+    total_amount: totalAmount,
+    paid_amount: paidAmount,
+    balance: balance,
+  }).eq('id', purchaseId);
+  alert('Purchase updated! ✅');
+  showAdminTab('purchases');
+}
+
+function generatePurchaseBill(purchaseId) {
+  window.open('purchase-bill.html?id=' + purchaseId, '_blank');
+}
+
+function showAddExpense() {
+  const form = document.getElementById('add_expense_form');
+  if (form.innerHTML !== '') { form.innerHTML = ''; return; }
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-red-200">
+      <h3 class="font-bold text-red-700 mb-3">Add Expense</h3>
+      <div class="space-y-2">
+        <select id="exp_category" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option>Transport</option>
+          <option>Loading / Unloading</option>
+          <option>Rent</option>
+          <option>Electricity</option>
+          <option>Salary</option>
+          <option>Other</option>
+        </select>
+        <input id="exp_desc" placeholder="Description (optional)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="exp_amount" type="number" placeholder="Amount ₹ *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <select id="exp_via" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="cash">Cash</option>
+          <option value="bank">Bank</option>
+        </select>
+        <input id="exp_date" type="date" class="w-full border rounded-lg px-3 py-2 text-sm" value="${new Date().toISOString().split('T')[0]}" />
+        <input id="exp_notes" placeholder="Notes (optional)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <button onclick="saveExpense()" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold">Save Expense</button>
+      </div>
+    </div>`;
+}
+
+async function saveExpense() {
+  const amount = parseFloat(document.getElementById('exp_amount').value);
+  if (!amount) { alert('Amount is required!'); return; }
+  const paidVia = document.getElementById('exp_via').value;
+  const { error } = await db.from('expenses').insert({
+    category: document.getElementById('exp_category').value,
+    description: document.getElementById('exp_desc').value.trim(),
+    amount,
+    paid_via: paidVia,
+    expense_date: document.getElementById('exp_date').value,
+    notes: document.getElementById('exp_notes').value.trim(),
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+  const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
+  const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+  await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'out', amount, running_balance: currentBal - amount, reference_type: 'expense', note: document.getElementById('exp_category').value });
+  alert('Expense saved! ✅');
+  showAdminTab('expenses');
+}
+
+async function editExpense(expenseId) {
+  const e = (window._allExpenses || []).find(e => e.id === expenseId);
+  if (!e) return;
+  const form = document.getElementById('add_expense_form');
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-yellow-200">
+      <h3 class="font-bold text-yellow-700 mb-3">Edit Expense</h3>
+      <div class="space-y-2">
+        <select id="ee_category" class="w-full border rounded-lg px-3 py-2 text-sm">
+          ${['Transport','Loading / Unloading','Rent','Electricity','Salary','Other'].map(c=>`<option ${e.category===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+        <input id="ee_desc" value="${e.description||''}" placeholder="Description" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ee_amount" type="number" value="${e.amount}" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <select id="ee_via" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="cash" ${e.paid_via==='cash'?'selected':''}>Cash</option>
+          <option value="bank" ${e.paid_via==='bank'?'selected':''}>Bank</option>
+        </select>
+        <input id="ee_date" type="date" value="${e.expense_date||''}" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <input id="ee_notes" value="${e.notes||''}" placeholder="Notes" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <button onclick="saveEditExpense('${e.id}')" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-bold">Save Changes</button>
+      </div>
+    </div>`;
+}
+
+async function saveEditExpense(expenseId) {
+  const amount = parseFloat(document.getElementById('ee_amount').value);
+  if (!amount) { alert('Amount required!'); return; }
+  await db.from('expenses').update({
+    category: document.getElementById('ee_category').value,
+    description: document.getElementById('ee_desc').value.trim(),
+    amount,
+    paid_via: document.getElementById('ee_via').value,
+    expense_date: document.getElementById('ee_date').value,
+    notes: document.getElementById('ee_notes').value.trim(),
+  }).eq('id', expenseId);
+  alert('Expense updated! ✅');
+  showAdminTab('expenses');
+}
+
+async function deleteExpense(expenseId) {
+  if (!confirm('Delete this expense?')) return;
+  await db.from('expenses').delete().eq('id', expenseId);
+  alert('Expense deleted!');
+  showAdminTab('expenses');
+}
+
+function showExpenseReport(type) {
+  const expenses = window._allExpenses || [];
+  const panel = document.getElementById('expense_report_panel');
+  if (!panel) return;
+  if (type === 'monthly') {
+    const monthly = {};
+    expenses.forEach(e => {
+      const month = (e.expense_date||'').substring(0,7);
+      if (!monthly[month]) monthly[month] = 0;
+      monthly[month] += e.amount;
+    });
+    panel.innerHTML = `<div class="bg-white rounded-xl shadow p-4"><div class="font-bold mb-3">📊 Monthly Expense Summary</div>
+      <table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="px-3 py-2 text-left">Month</th><th class="px-3 py-2 text-right">Total</th></tr></thead><tbody>
+      ${Object.entries(monthly).sort((a,b)=>b[0].localeCompare(a[0])).map(([m,amt])=>`<tr class="border-b"><td class="px-3 py-2">${m}</td><td class="px-3 py-2 text-right font-bold text-red-500">₹${amt.toLocaleString('en-IN')}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  } else if (type === 'category') {
+    const cats = {};
+    expenses.forEach(e => {
+      if (!cats[e.category]) cats[e.category] = 0;
+      cats[e.category] += e.amount;
+    });
+    panel.innerHTML = `<div class="bg-white rounded-xl shadow p-4"><div class="font-bold mb-3">📂 Category-wise Expenses</div>
+      <table class="w-full text-sm"><thead><tr class="bg-gray-100"><th class="px-3 py-2 text-left">Category</th><th class="px-3 py-2 text-right">Total</th></tr></thead><tbody>
+      ${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,amt])=>`<tr class="border-b"><td class="px-3 py-2">${c}</td><td class="px-3 py-2 text-right font-bold text-red-500">₹${amt.toLocaleString('en-IN')}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  } else if (type === 'cashflow') {
+    const cashExp = expenses.filter(e=>e.paid_via==='cash').reduce((s,e)=>s+e.amount,0);
+    const bankExp = expenses.filter(e=>e.paid_via==='bank').reduce((s,e)=>s+e.amount,0);
+    panel.innerHTML = `<div class="bg-white rounded-xl shadow p-4"><div class="font-bold mb-3">💰 Cash Flow Summary</div>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between border-b pb-2"><span>Cash Expenses</span><span class="font-bold text-red-500">₹${cashExp.toLocaleString('en-IN')}</span></div>
+        <div class="flex justify-between border-b pb-2"><span>Bank Expenses</span><span class="font-bold text-red-500">₹${bankExp.toLocaleString('en-IN')}</span></div>
+        <div class="flex justify-between font-bold"><span>Total Outflow</span><span class="text-red-600">₹${(cashExp+bankExp).toLocaleString('en-IN')}</span></div>
+      </div></div>`;
+  }
+}
+
+async function saveCashBankEntry() {
+  const account = document.getElementById('cb_account').value;
+  const type = document.getElementById('cb_type').value;
+  const amount = parseFloat(document.getElementById('cb_amount').value);
+  const note = document.getElementById('cb_note').value.trim();
+  if (!amount) { alert('Amount is required!'); return; }
+  const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', account).order('created_at', { ascending: false }).limit(1);
+  const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+  const newBal = type === 'in' ? currentBal + amount : currentBal - amount;
+  await db.from('cash_bank_ledger').insert({ account_type: account, entry_type: type, amount, running_balance: newBal, reference_type: 'manual', note });
+  alert('Entry saved! ✅');
+  showAdminTab('cashbank');
+}
+
+async function saveTransfer() {
+  const from = document.getElementById('tr_from').value;
+  const to = from === 'cash' ? 'bank' : 'cash';
+  const amount = parseFloat(document.getElementById('tr_amount').value);
+  if (!amount) { alert('Amount is required!'); return; }
+  const { data: fromLatest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', from).order('created_at', { ascending: false }).limit(1);
+  const { data: toLatest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', to).order('created_at', { ascending: false }).limit(1);
+  const fromBal = fromLatest && fromLatest.length > 0 ? fromLatest[0].running_balance : 0;
+  const toBal = toLatest && toLatest.length > 0 ? toLatest[0].running_balance : 0;
+  await db.from('cash_bank_ledger').insert({ account_type: from, entry_type: 'out', amount, running_balance: fromBal - amount, reference_type: 'transfer', note: 'Transfer to ' + to });
+  await db.from('cash_bank_ledger').insert({ account_type: to, entry_type: 'in', amount, running_balance: toBal + amount, reference_type: 'transfer', note: 'Transfer from ' + from });
+  alert('Transfer done! ✅');
+  showAdminTab('cashbank');
+}
+
+async function deleteCashBankEntry(entryId) {
+  if (!confirm('Delete this entry?')) return;
+  await db.from('cash_bank_ledger').delete().eq('id', entryId);
+  alert('Entry deleted!');
+  showAdminTab('cashbank');
+}
+
 function showAddSupplier() {
   const form = document.getElementById('add_supplier_form');
   if (form.innerHTML !== '') { form.innerHTML = ''; return; }
