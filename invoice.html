@@ -482,8 +482,9 @@ function recalcAll() {
   // Per-row amounts
   rows.forEach(row => {
     const baseAmt = row.qty * row.price;
-    const gstAmt = baseAmt * row.gst / 100;
-    const amt = baseAmt + gstAmt;
+    const discounted = baseAmt - row.disAmt;
+    const gstAmt = discounted * row.gst / 100;
+    const amt = discounted + gstAmt;
     totalQty += row.qty;
     totalAmt += amt;
     const cell = document.getElementById('it_amount_' + row.r);
