@@ -1265,8 +1265,10 @@ function aiConfirmItem(orderId) {
   window['_aiItems_' + orderId].push({ productId: pid, variantId: vid, pkgId, name: product.name, size: variant.bag_size, boxLabel: pkg.box_label, pricePerBox: pkg.price_per_box, qty });
   const list = document.getElementById('ai_items_list_' + orderId);
   if (list) list.innerHTML = (window['_aiItems_' + orderId]).map(i => `<div class="text-xs bg-white rounded px-2 py-1 mb-1 text-gray-700">${i.name} ${i.size} · ${i.boxLabel} x${i.qty} = ₹${i.pricePerBox * i.qty}</div>`).join('');
-  document.getElementById('ai_variant_row_' + orderId).classList.add('hidden');
-  document.getElementById('ai_product_' + orderId).value = '';
+  const vr = document.getElementById('ai_variant_row_' + orderId);
+  if (vr) vr.classList.add('hidden');
+  const ps = document.getElementById('ai_product_' + orderId);
+  if (ps) ps.value = '';
 }
 
 async function aiSaveItems(orderId, customerId) {
