@@ -475,6 +475,24 @@ function getRows() {
   });
 }
 
+function recalcRowDiscount(r, changedField) {
+  const price = parseFloat(document.getElementById('it_price_' + r)?.value) || 0;
+  const qty = parseFloat(document.getElementById('it_qty_' + r)?.value) || 1;
+  const baseAmt = price * qty;
+  if (changedField === 'pct') {
+    const pct = parseFloat(document.getElementById('it_dis_pct_' + r)?.value) || 0;
+    const amt = (baseAmt * pct / 100);
+    const el = document.getElementById('it_dis_amt_' + r);
+    if (el) el.value = amt.toFixed(2);
+  } else {
+    const amt = parseFloat(document.getElementById('it_dis_amt_' + r)?.value) || 0;
+    const pct = baseAmt > 0 ? (amt / baseAmt * 100) : 0;
+    const el = document.getElementById('it_dis_pct_' + r);
+    if (el) el.value = pct.toFixed(2);
+  }
+  recalcAll();
+}
+
 function recalcAll() {
   const rows = getRows();
   let totalQty = 0, totalAmt = 0;
