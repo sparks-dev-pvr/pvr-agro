@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Purchase Bill — PVR Agro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+  }
+  [contenteditable]:focus { outline: 2px solid #15803d; border-radius: 4px; }
+</style>
+</head>
+<body class="bg-gray-100 p-4">
+
+<div class="no-print flex gap-2 mb-4 justify-center">
+  <button onclick="window.print()" class="bg-green-700 text-white px-6 py-2 rounded-lg font-bold">🖨️ Print / Save PDF</button>
+  <button onclick="window.close()" class="bg-gray-400 text-white px-6 py-2 rounded-lg font-bold">✕ Close</button>
+</div>
+
+<div id="bill" class="bg-white max-w-4xl mx-auto p-6 shadow-lg text-sm" style="font-family: Arial, sans-serif;">
+
+  <!-- Header -->
+  <div class="text-center font-bold text-lg mb-3 border-b pb-2">Bill</div>
+
+  <div class="grid grid-cols-2 gap-4 mb-3">
+    <!-- Our Company (Bill To) -->
+    <div class="border p-3">
+      <img src="https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg"
+        class="h-12 w-12 rounded-full object-cover mb-2" onerror="this.style.display='none'" />
+      <div class="font-bold">P.V.R AGROCHEMICALS</div>
+      <div class="text-xs text-gray-600">BLOCK NO 31 PLOT NO 45 DOOR NO 4-10-1246 AUTO NAGAR RANGA REDDY DISTRICT</div>
+      <div class="text-xs text-gray-600">Phone no.: 9573711019</div>
+      <div class="text-xs text-gray-600">Email: pvragrohyd@gmail.com</div>
+      <div class="text-xs text-gray-600">GSTIN: 36AJRPR1684F1ZP</div>
+      <div class="text-xs text-gray-600">State: 36-Telangana</div>
+    </div>
+
+    <!-- Bill Details -->
+    <div class="border p-3 text-xs">
+      <table class="w-full">
+        <tr class="border-b">
+          <td class="py-1 font-semibold text-gray-500">Bill No.</td>
+          <td class="py-1 font-bold" id="bill_number" contenteditable="true">-</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1 font-semibold text-gray-500">Date</td>
+          <td class="py-1" id="bill_date" contenteditable="true">-</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1 font-semibold text-gray-500">Place of Supply</td>
+          <td class="py-1" id="place_of_supply" contenteditable="true">-</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1 font-semibold text-gray-500">Transport Name</td>
+          <td class="py-1" id="transport_name" contenteditable="true">-</td>
+        </tr>
+        <tr>
+          <td class="py-1 font-semibold text-gray-500">Delivery Location</td>
+          <td class="py-1" id="delivery_location" contenteditable="true">-</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bill From (Supplier) -->
+  <div class="border p-3 mb-3 text-xs">
+    <div class="font-bold text-gray-500 mb-1">Bill From</div>
+    <div class="font-bold text-base" id="supplier_name" contenteditable="true">Supplier Name</div>
+    <div id="supplier_address" contenteditable="true" class="text-gray-600">Address</div>
+    <div id="supplier_phone" contenteditable="true" class="text-gray-600">Contact No.: -</div>
+    <div id="supplier_gst" contenteditable="true" class="text-gray-600">GSTIN Number: -</div>
+    <div id="supplier_state" contenteditable="true" class="text-gray-600">State: -</div>
+  </div>
+
+  <!-- Items Table -->
+  <div class="mb-3">
+    <table class="w-full border-collapse text-xs">
+      <thead>
+        <tr class="bg-gray-100 border">
+          <th class="border px-2 py-1 text-left">#</th>
+          <th class="border px-2 py-1 text-left">Item Name</th>
+          <th class="border px-2 py-1">HSN/SAC</th>
+          <th class="border px-2 py-1">Batch No.</th>
+          <th class="border px-2 py-1">Exp. Date</th>
+          <th class="border px-2 py-1">Mfg. Date</th>
+          <th class="border px-2 py-1">Size</th>
+          <th class="border px-2 py-1">Qty</th>
+          <th class="border px-2 py-1">Unit</th>
+          <th class="border px-2 py-1">Price/Unit</th>
+          <th class="border px-2 py-1">GST%</th>
+          <th class="border px-2 py-1">Amount</th>
+        </tr>
+      </thead>
+      <tbody id="items_body"></tbody>
+      <tfoot>
+        <tr class="border font-bold bg-gray-50">
+          <td colspan="7" class="border px-2 py-1 text-right">Total</td>
+          <td class="border px-2 py-1 text-center" id="total_qty">0</td>
+          <td colspan="2" class="border px-2 py-1"></td>
+          <td class="border px-2 py-1"></td>
+          <td class="border px-2 py-1 text-right" id="sub_total_row">₹0</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <!-- Amount in Words + Amounts -->
+  <div class="grid grid-cols-2 gap-4 mb-3 text-xs">
+    <div class="border p-3">
+      <div class="font-semibold text-gray-500 mb-1">Bill Amount in Words</div>
+      <div id="amount_in_words" class="font-medium italic"></div>
+    </div>
+    <div class="border p-3">
+      <div class="font-semibold text-gray-500 mb-2">Amounts</div>
+      <table class="w-full">
+        <tr class="border-b">
+          <td class="py-1">Sub Total</td>
+          <td class="py-1 text-right font-semibold" id="amt_subtotal">₹0</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1">Transportation Charges</td>
+          <td class="py-1 text-right font-semibold text-red-500" id="amt_transport" contenteditable="true">₹0</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1 font-bold">Total</td>
+          <td class="py-1 text-right font-bold" id="amt_total">₹0</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1">Paid</td>
+          <td class="py-1 text-right font-semibold text-green-600" id="amt_paid" contenteditable="true">₹0</td>
+        </tr>
+        <tr class="border-b">
+          <td class="py-1">Balance</td>
+          <td class="py-1 text-right font-semibold text-red-500" id="amt_balance">₹0</td>
+        </tr>
+        <tr>
+          <td class="py-1">Current Balance</td>
+          <td class="py-1 text-right font-semibold text-blue-600" id="amt_current_balance">₹0</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- HSN Tax Summary -->
+  <div class="mb-3 text-xs">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="bg-gray-100 border">
+          <th class="border px-2 py-1 text-left">HSN/SAC</th>
+          <th class="border px-2 py-1 text-right">Taxable Amount</th>
+          <th class="border px-2 py-1 text-center" colspan="2">IGST</th>
+          <th class="border px-2 py-1 text-right">Total Tax Amount</th>
+        </tr>
+        <tr class="bg-gray-50 border">
+          <th class="border px-2 py-1"></th>
+          <th class="border px-2 py-1"></th>
+          <th class="border px-2 py-1 text-center">Rate</th>
+          <th class="border px-2 py-1 text-center">Amount</th>
+          <th class="border px-2 py-1"></th>
+        </tr>
+      </thead>
+      <tbody id="hsn_body"></tbody>
+      <tfoot id="hsn_foot"></tfoot>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="grid grid-cols-2 gap-4 text-xs">
+    <div class="border p-3">
+      <div class="font-semibold mb-1">Terms and conditions</div>
+      <div contenteditable="true" class="text-gray-600">Thanks for doing business with us!</div>
+    </div>
+    <div class="border p-3 text-right">
+      <div class="font-semibold mb-1">For: P.V.R AGROCHEMICALS</div>
+      <div class="mt-10 text-gray-500">Authorized Signatory</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZGphanVoZnFtdXV6amVqbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDY2ODcsImV4cCI6MjA5MzYyMjY4N30.Y1w43s7vx2V_XkgYvSUB0xTIsnGGFWyCU09z_r_otEg';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function numberToWords(num) {
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  if(num===0)return'Zero';if(num<20)return ones[num];if(num<100)return tens[Math.floor(num/10)]+(num%10?' '+ones[num%10]:'');
+  if(num<1000)return ones[Math.floor(num/100)]+' Hundred'+(num%100?' '+numberToWords(num%100):'');
+  if(num<100000)return numberToWords(Math.floor(num/1000))+' Thousand'+(num%1000?' '+numberToWords(num%1000):'');
+  if(num<10000000)return numberToWords(Math.floor(num/100000))+' Lakh'+(num%100000?' '+numberToWords(num%100000):'');
+  return numberToWords(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+numberToWords(num%10000000):'');
+}
+
+async function loadBill() {
+  const params = new URLSearchParams(window.location.search);
+  const purchaseId = params.get('id');
+  if (!purchaseId) { document.getElementById('bill').innerHTML = '<div class="text-center text-red-500 py-10">No purchase ID provided.</div>'; return; }
+
+  const { data: purchase } = await db.from('purchases').select('*').eq('id', purchaseId).single();
+  const { data: items } = await db.from('purchase_items').select('*').eq('purchase_id', purchaseId);
+  const { data: supplier } = purchase?.supplier_id ? await db.from('suppliers').select('*').eq('id', purchase.supplier_id).single() : { data: null };
+  const { data: supplierLedger } = purchase?.supplier_id ? await db.from('supplier_ledger').select('*').eq('supplier_id', purchase.supplier_id).order('created_at', { ascending: true }) : { data: [] };
+
+  if (!purchase) { document.getElementById('bill').innerHTML = '<div class="text-center text-red-500 py-10">Purchase not found.</div>'; return; }
+
+  // Fill header
+  document.getElementById('bill_number').textContent = purchase.bill_number || '-';
+  document.getElementById('bill_date').textContent = purchase.bill_date || '-';
+  document.getElementById('place_of_supply').textContent = purchase.place_of_supply || '-';
+  document.getElementById('transport_name').textContent = purchase.transport_name || '-';
+  document.getElementById('delivery_location').textContent = purchase.delivery_location || '-';
+
+  // Fill supplier
+  document.getElementById('supplier_name').textContent = supplier?.name || purchase.supplier_name || '-';
+  document.getElementById('supplier_address').textContent = supplier?.address || '-';
+  document.getElementById('supplier_phone').textContent = 'Contact No.: ' + (supplier?.phone || '-');
+  document.getElementById('supplier_gst').textContent = 'GSTIN Number: ' + (supplier?.gst_number || '-');
+  document.getElementById('supplier_state').textContent = 'State: ' + (supplier?.state || '-');
+
+  // Fill items
+  const allItems = items || [];
+  let subTotal = 0;
+  let totalQty = 0;
+  const hsnMap = {};
+
+  document.getElementById('items_body').innerHTML = allItems.map((item, i) => {
+    const taxableAmount = item.quantity * item.unit_price;
+    const gstAmount = taxableAmount * (item.gst_percent / 100);
+    const amount = taxableAmount + gstAmount;
+    subTotal += amount;
+    totalQty += item.quantity;
+    if (item.hsn_code) {
+      if (!hsnMap[item.hsn_code]) hsnMap[item.hsn_code] = { taxable: 0, gstRate: item.gst_percent, gstAmount: 0 };
+      hsnMap[item.hsn_code].taxable += taxableAmount;
+      hsnMap[item.hsn_code].gstAmount += gstAmount;
+    }
+    return `<tr class="border">
+      <td class="border px-2 py-1 text-center">${i+1}</td>
+      <td class="border px-2 py-1" contenteditable="true">${item.product_name || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.hsn_code || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.batch_number || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.exp_date || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.mfg_date || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.size || ''}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.quantity}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.unit || 'Pcs'}</td>
+      <td class="border px-2 py-1 text-right" contenteditable="true">₹${item.unit_price}</td>
+      <td class="border px-2 py-1 text-center" contenteditable="true">${item.gst_percent}%</td>
+      <td class="border px-2 py-1 text-right">₹${amount.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+
+  const transportCharges = purchase.transport_charges || 0;
+  const totalAmount = subTotal + transportCharges;
+  const paidAmount = purchase.paid_amount || 0;
+  const balance = totalAmount - paidAmount;
+
+  // Running supplier balance
+  let runningBal = 0;
+  (supplierLedger || []).forEach(l => {
+    if (l.type === 'debit') runningBal += l.amount;
+    else runningBal -= l.amount;
+  });
+
+  document.getElementById('total_qty').textContent = totalQty;
+  document.getElementById('sub_total_row').textContent = '₹' + subTotal.toFixed(2);
+  document.getElementById('amt_subtotal').textContent = '₹' + subTotal.toFixed(2);
+  document.getElementById('amt_transport').textContent = transportCharges > 0 ? '-₹' + transportCharges.toFixed(2) : '₹0';
+  document.getElementById('amt_total').textContent = '₹' + totalAmount.toFixed(2);
+  document.getElementById('amt_paid').textContent = '₹' + paidAmount.toFixed(2);
+  document.getElementById('amt_balance').textContent = '₹' + balance.toFixed(2);
+  document.getElementById('amt_current_balance').textContent = '₹' + runningBal.toFixed(2);
+  document.getElementById('amount_in_words').textContent = numberToWords(Math.round(totalAmount)) + ' Rupees only';
+
+  // HSN Summary
+  const hsnEntries = Object.entries(hsnMap);
+  let totalTaxable = 0, totalGst = 0;
+  document.getElementById('hsn_body').innerHTML = hsnEntries.map(([hsn, data]) => {
+    totalTaxable += data.taxable;
+    totalGst += data.gstAmount;
+    return `<tr class="border">
+      <td class="border px-2 py-1">${hsn}</td>
+      <td class="border px-2 py-1 text-right">₹${data.taxable.toFixed(2)}</td>
+      <td class="border px-2 py-1 text-center">${data.gstRate}%</td>
+      <td class="border px-2 py-1 text-right">₹${data.gstAmount.toFixed(2)}</td>
+      <td class="border px-2 py-1 text-right">₹${data.gstAmount.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('hsn_foot').innerHTML = `<tr class="border font-bold bg-gray-100">
+    <td class="border px-2 py-1">Total</td>
+    <td class="border px-2 py-1 text-right">₹${totalTaxable.toFixed(2)}</td>
+    <td class="border px-2 py-1"></td>
+    <td class="border px-2 py-1 text-right">₹${totalGst.toFixed(2)}</td>
+    <td class="border px-2 py-1 text-right">₹${totalGst.toFixed(2)}</td>
+  </tr>`;
+}
+
+loadBill();
+</script>
+</body>
+</html>
