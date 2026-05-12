@@ -486,8 +486,10 @@ function recalcAll() {
 
   // Totals
   const subtotal = totalAmt;
-  const rounded = Math.round(subtotal);
-  const roundoff = rounded - subtotal;
+  const discount = parseFloat(document.getElementById('t_discount')?.value) || 0;
+  const afterDiscount = subtotal - discount;
+  const rounded = Math.round(afterDiscount);
+  const roundoff = rounded - afterDiscount;
   document.getElementById('total_qty').textContent = totalQty;
   document.getElementById('total_amount').textContent = fmt(totalAmt);
   document.getElementById('t_subtotal').textContent = fmt(subtotal);
