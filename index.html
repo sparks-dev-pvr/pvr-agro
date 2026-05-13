@@ -483,7 +483,7 @@ async function loadProducts() {
 
 async function loadAdminData() { showAdminTab('orders'); }
 
-async function showAdminTab(tab) {
+async function showAdminTab_DISABLED(tab) {
   const content = document.getElementById('admin_content');
   if (!content) return;
   content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
