@@ -1977,6 +1977,83 @@ async function deleteCashBankEntry(entryId) {
   showAdminTab('cashbank');
 }
 
+async function showAgingReport() {
+  const panel = document.getElementById('aging_report_panel');
+  if (!panel) return;
+  if (panel.innerHTML !== '') { panel.innerHTML = ''; return; }
+  panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
+  const { data: credits } = await db.from('credit_summary').select('*');
+  const { data: orders } = await db.from('orders').select('*').eq('payment_method', 'credit').eq('order_status', 'dispatched');
+  const today = new Date();
+  const aging = (credits || []).filter(c => c.balance > 0).map(c => {
+    const customerOrders = (orders || []).filter(o => o.customer_id === c.customer_id);
+    const oldest = customerOrders.reduce((min, o) => {
+      const d = new Date(o.created_at);
+      return d < min ? d : min;
+    }, today);
+    const days = Math.floor((today - oldest) / (1000 * 60 * 60 * 24));
+    let bracket = '0-30 days';
+    let color = 'text-green-600';
+    if (days > 90) { bracket = '90+ days'; color = 'text-red-700 font-bold'; }
+    else if (days > 60) { bracket = '61-90 days'; color = 'text-red-500'; }
+    else if (days > 30) { bracket = '31-60 days'; color = 'text-orange-500'; }
+    return { name: c.name, phone: c.phone, balance: c.balance, days, bracket, color };
+  }).sort((a, b) => b.days - a.days);
+  if (aging.length === 0) {
+    panel.innerHTML = '<div class="bg-white rounded-xl shadow p-4 text-green-600 font-bold text-center">No outstanding balances! ✅</div>';
+    return;
+  }
+  panel.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="font-bold text-lg mb-3">📊 Credit Aging Report</div>
+      <div class="grid grid-cols-4 gap-3 mb-4">
+        <div class="bg-green-50 rounded-lg p-2 text-center">
+          <div class="text-xs text-gray-500">0-30 days</div>
+          <div class="font-bold text-green-600">${aging.filter(a=>a.bracket==='0-30 days').length} customers</div>
+          <div class="text-xs text-green-700">₹${aging.filter(a=>a.bracket==='0-30 days').reduce((s,a)=>s+a.balance,0).toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-orange-50 rounded-lg p-2 text-center">
+          <div class="text-xs text-gray-500">31-60 days</div>
+          <div class="font-bold text-orange-500">${aging.filter(a=>a.bracket==='31-60 days').length} customers</div>
+          <div class="text-xs text-orange-700">₹${aging.filter(a=>a.bracket==='31-60 days').reduce((s,a)=>s+a.balance,0).toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-red-50 rounded-lg p-2 text-center">
+          <div class="text-xs text-gray-500">61-90 days</div>
+          <div class="font-bold text-red-500">${aging.filter(a=>a.bracket==='61-90 days').length} customers</div>
+          <div class="text-xs text-red-700">₹${aging.filter(a=>a.bracket==='61-90 days').reduce((s,a)=>s+a.balance,0).toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-red-100 rounded-lg p-2 text-center">
+          <div class="text-xs text-gray-500">90+ days</div>
+          <div class="font-bold text-red-700">${aging.filter(a=>a.bracket==='90+ days').length} customers</div>
+          <div class="text-xs text-red-800">₹${aging.filter(a=>a.bracket==='90+ days').reduce((s,a)=>s+a.balance,0).toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="bg-green-700 text-white">
+              <th class="px-3 py-2 text-left">Customer</th>
+              <th class="px-3 py-2 text-left">Phone</th>
+              <th class="px-3 py-2 text-right">Outstanding</th>
+              <th class="px-3 py-2 text-center">Days</th>
+              <th class="px-3 py-2 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${aging.map((a, i) => `
+              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
+                <td class="px-3 py-2 font-medium">${a.name}</td>
+                <td class="px-3 py-2 text-gray-500">${a.phone}</td>
+                <td class="px-3 py-2 text-right font-bold text-red-500">₹${a.balance.toLocaleString('en-IN')}</td>
+                <td class="px-3 py-2 text-center text-gray-600">${a.days}</td>
+                <td class="px-3 py-2 text-center ${a.color}">${a.bracket}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
 function showAddSupplier() {
   const form = document.getElementById('add_supplier_form');
   if (form.innerHTML !== '') { form.innerHTML = ''; return; }
