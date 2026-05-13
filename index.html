@@ -2529,7 +2529,7 @@ async function loadMonthlyReport() {
         ${(orders||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No sales in this period</div>' :
         '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-right">Amount</th><th class="px-2 py-2 text-center">Payment</th></tr></thead><tbody>' +
         (orders||[]).map((o,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${new Date(o.created_at).toLocaleDateString('en-IN')}</td><td class="px-2 py-2">${o.customers?.name||'Unknown'}</td><td class="px-2 py-2 text-right font-bold text-green-700">${fmt(o.total_amount)}</td><td class="px-2 py-2 text-center text-xs text-blue-600">${o.payment_method}</td></tr>`).join('') +
-        `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="2" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td><td></td></tr></tfoot></table></div>'}
+        "</tbody><tfoot><tr class=\"bg-gray-800 text-white font-bold\"><td colspan=\"2\" class=\"px-2 py-2\">Total</td><td class=\"px-2 py-2 text-right\">" + fmt(totalSales) + "</td><td></td></tr></tfoot></table></div>"}
       </div>
 
       <div class="bg-white rounded-xl shadow p-4">
