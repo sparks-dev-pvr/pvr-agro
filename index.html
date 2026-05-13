@@ -709,6 +709,21 @@ async function showAdminTab(tab) {
         </div>
       </div>
       <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Set Opening Balance</div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <div class="border rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">💵 Cash Opening</div>
+            <input id="cash_opening" type="number" placeholder="₹0" class="w-full text-center border rounded px-2 py-1 text-sm" />
+            <button onclick="setOpeningBalance('cash')" class="mt-2 w-full bg-orange-500 text-white py-1 rounded-lg text-xs font-bold">Set</button>
+          </div>
+          <div class="border rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">🏦 Bank Opening</div>
+            <input id="bank_opening" type="number" placeholder="₹0" class="w-full text-center border rounded px-2 py-1 text-sm" />
+            <button onclick="setOpeningBalance('bank')" class="mt-2 w-full bg-blue-500 text-white py-1 rounded-lg text-xs font-bold">Set</button>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
         <div class="font-bold mb-3">Manual Entry</div>
         <div class="space-y-2 mb-2">
           <select id="cb_account" class="w-full border rounded-lg px-3 py-2 text-sm">
