@@ -2005,6 +2005,17 @@ function showExpenseReport(type) {
   }
 }
 
+async function setOpeningBalance(accountType) {
+  const amount = parseFloat(document.getElementById(accountType + '_opening')?.value);
+  if (!amount || isNaN(amount)) { alert('Please enter a valid amount!'); return; }
+  if (!confirm('This will add ₹' + amount + ' as opening balance for ' + accountType + '. Continue?')) return;
+  const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', accountType).order('created_at', { ascending: false }).limit(1);
+  const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+  await db.from('cash_bank_ledger').insert({ account_type: accountType, entry_type: 'in', amount, running_balance: currentBal + amount, reference_type: 'opening_balance', note: 'Opening Balance' });
+  alert('Opening balance of ₹' + amount + ' set for ' + accountType + '! ✅');
+  showAdminTab('cashbank');
+}
+
 async function saveCashBankEntry() {
   const account = document.getElementById('cb_account').value;
   const type = document.getElementById('cb_type').value;
