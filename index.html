@@ -2009,12 +2009,13 @@ async function deleteCashBankEntry(entryId) {
   showAdminTab('cashbank');
 }
 
-function editAgingDays(customerId, customerName) {
-  const current = localStorage.getItem('aging_days_' + customerId) || '';
+async function editAgingDays(customerId, customerName) {
+  const { data: existing } = await db.from('customer_aging_override').select('days_override').eq('customer_id', customerId).single().catch(() => ({ data: null }));
+  const current = existing ? existing.days_override : '';
   const days = prompt('Edit number of days since credit for ' + customerName + ':\n(Enter how many days ago the oldest unpaid amount started)', current);
   if (!days || isNaN(days)) return;
   const d = parseInt(days);
-  localStorage.setItem('aging_days_' + customerId, d);
+  await db.from('customer_aging_override').upsert({ customer_id: customerId, days_override: d, updated_at: new Date().toISOString() }, { onConflict: 'customer_id' });
   alert('Saved! ✅');
   showAgingReport(true);
 }
