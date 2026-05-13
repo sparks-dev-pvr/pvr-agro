@@ -2500,8 +2500,8 @@ async function loadMonthlyReport() {
   const result = document.getElementById('monthly_report_result');
   result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
 
-  const fromDT = from + 'T00:00:00';
-  const toDT = to + 'T23:59:59';
+  const fromDT = from + 'T00:00:00+05:30';
+  const toDT = to + 'T23:59:59+05:30';
 
   const [{ data: orders }, { data: purchases }, { data: expenses }, { data: cbLedger }] = await Promise.all([
     db.from('orders').select('*, customers(name)').gte('created_at', fromDT).lte('created_at', toDT).order('created_at'),
