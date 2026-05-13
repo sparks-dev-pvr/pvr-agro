@@ -1974,9 +1974,15 @@ async function saveEditExpense(expenseId) {
 }
 
 async function deleteExpense(expenseId) {
-  if (!confirm('Delete this expense?')) return;
+  if (!confirm('Delete this expense? Cash/Bank will be adjusted.')) return;
+  const expense = (window._allExpenses || []).find(e => e.id === expenseId);
+  if (expense) {
+    const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', expense.paid_via).order('created_at', { ascending: false }).limit(1);
+    const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+    await db.from('cash_bank_ledger').insert({ account_type: expense.paid_via, entry_type: 'in', amount: expense.amount, running_balance: currentBal + expense.amount, reference_type: 'expense_deleted', note: 'Deleted expense: ' + expense.category });
+  }
   await db.from('expenses').delete().eq('id', expenseId);
-  alert('Expense deleted!');
+  alert('Expense deleted! Cash/Bank adjusted! ✅');
   showAdminTab('expenses');
 }
 
