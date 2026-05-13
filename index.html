@@ -2682,8 +2682,8 @@ async function loadSalesReport() {
       ${customerRows.length === 0 ? '<div class="text-gray-400 text-center py-3">No data</div>' :
       '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-blue-700 text-white"><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-left">Phone</th><th class="px-2 py-2 text-right">Orders</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
       customerRows.map(([, d], i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 font-medium">${d.name}</td><td class="px-2 py-2 text-gray-400">${d.phone}</td><td class="px-2 py-2 text-right">${d.orders}</td><td class="px-2 py-2 text-right font-bold text-blue-700">${fmt(d.amount)}</td></tr>`).join('') +
-      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="2" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${(orders||[]).length}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>'}
-    </div>`;
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="2" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${(orders||[]).length}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>`}
+    </div
 }
 
 async function showAdminTab(tab) {
