@@ -1984,7 +1984,7 @@ function editAgingDays(customerId, customerName) {
   const d = parseInt(days);
   localStorage.setItem('aging_days_' + customerId, d);
   alert('Saved! ✅');
-  showAgingReport();
+  showAgingReport(true);
 }
 
 async function showAgingReport(forceRefresh) {
