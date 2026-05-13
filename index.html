@@ -671,7 +671,7 @@ async function showAdminTab(tab) {
 
   } else if (tab === 'cashbank') {
     const cbPass = prompt('Enter Cash & Bank password:');
-    if (!cbPass || cbPass.trim() !== '74820406') { alert('Wrong password!'); return; }
+    if (!cbPass || cbPass.trim() !== '74820409') { alert('Wrong password!'); return; }
     const { data: ledger } = await db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false });
     const cashLedger = (ledger||[]).filter(l=>l.account_type==='cash');
     const bankLedger = (ledger||[]).filter(l=>l.account_type==='bank');
