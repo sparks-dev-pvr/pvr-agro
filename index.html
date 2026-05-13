@@ -2124,7 +2124,7 @@ async function editSupplierEntry(entryId, supplierId, currentAmount, currentNote
   if (note === null) return;
   await db.from('supplier_ledger').update({ amount: parseFloat(amount), note }).eq('id', entryId);
   alert('Entry updated! ✅');
-  await refreshSupplierDetail(supplierId);
+  await showAdminTab('suppliers');
 }
 
 async function deleteSupplierEntry(entryId, supplierId) {
