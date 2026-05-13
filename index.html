@@ -1987,7 +1987,8 @@ function editAgingDays(customerId, customerName) {
   showAgingReport();
 }
 
-async function showAgingReport() {
+async function showAgingReport(forceRefresh) {
+  window._agingForceRefresh = forceRefresh || false;
   const panel = document.getElementById('aging_report_panel');
   if (!panel) return;
   if (panel.innerHTML !== '' && !window._agingForceRefresh) { panel.innerHTML = ''; return; }
