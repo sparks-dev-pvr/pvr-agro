@@ -1973,7 +1973,20 @@ async function saveTransfer() {
 async function deleteCashBankEntry(entryId) {
   if (!confirm('Delete this entry?')) return;
   await db.from('cash_bank_ledger').delete().eq('id', entryId);
-  alert('Entry deleted!');
+  const { data: allEntries } = await db.from('cash_bank_ledger').select('*').order('created_at', { ascending: true });
+  const cashEntries = (allEntries || []).filter(l => l.account_type === 'cash');
+  const bankEntries = (allEntries || []).filter(l => l.account_type === 'bank');
+  let cashBal = 0;
+  for (const entry of cashEntries) {
+    cashBal = entry.entry_type === 'in' ? cashBal + entry.amount : cashBal - entry.amount;
+    await db.from('cash_bank_ledger').update({ running_balance: cashBal }).eq('id', entry.id);
+  }
+  let bankBal = 0;
+  for (const entry of bankEntries) {
+    bankBal = entry.entry_type === 'in' ? bankBal + entry.amount : bankBal - entry.amount;
+    await db.from('cash_bank_ledger').update({ running_balance: bankBal }).eq('id', entry.id);
+  }
+  alert('Entry deleted and balances recalculated! ✅');
   showAdminTab('cashbank');
 }
 
