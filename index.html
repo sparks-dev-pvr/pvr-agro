@@ -2298,8 +2298,13 @@ async function recordSupplierPayment(supplierId, supplierName, balance) {
   const amount = prompt('Record payment to ' + supplierName + '\nCurrent balance you owe: ₹' + balance + '\n\nEnter amount paid:');
   if (!amount || isNaN(amount)) return;
   const note = prompt('Add a note (optional):') || 'Payment made';
+  const via = prompt('Paid via (type cash or bank):') || 'cash';
+  const paidVia = via.toLowerCase().includes('bank') ? 'bank' : 'cash';
   await db.from('supplier_ledger').insert({ supplier_id: supplierId, amount: parseFloat(amount), type: 'credit', note });
-  alert('Payment of ₹' + amount + ' recorded! ✅');
+  const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
+  const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+  await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'out', amount: parseFloat(amount), running_balance: currentBal - parseFloat(amount), reference_type: 'supplier_payment', note: 'Payment to ' + supplierName });
+  alert('Payment of ₹' + amount + ' recorded and deducted from ' + paidVia + '! ✅');
   showAdminTab('suppliers');
 }
 
