@@ -1559,10 +1559,12 @@ function filterPurchases() {
   });
 }
 
-function showAddPurchase() {
+async function showAddPurchase() {
   const form = document.getElementById('add_purchase_form');
   if (form.innerHTML !== '') { form.innerHTML = ''; return; }
   const suppliers = window._allSuppliers || [];
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').eq('is_available', true).order('name');
+  window._npProducts = products || [];
   form.innerHTML = `
     <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-green-200">
       <h3 class="font-bold text-green-700 mb-3">New Purchase</h3>
@@ -1587,19 +1589,26 @@ function showAddPurchase() {
       <div class="font-semibold text-sm mb-2">Items</div>
       <div id="np_items_list" class="mb-2"></div>
       <div class="border rounded-lg p-3 bg-gray-50 mb-3">
+        <div class="space-y-2 mb-2">
+          <select id="ni_product_select" onchange="npSelectVariants()" class="w-full border rounded-lg px-2 py-2 text-sm">
+            <option value="">-- Select Product --</option>
+            ${(products||[]).map(p => `<option value="${p.id}">${p.name} (${p.company_name||''})</option>`).join('')}
+          </select>
+          <select id="ni_variant_select" onchange="npSelectPackagings()" class="w-full border rounded-lg px-2 py-2 text-sm">
+            <option value="">-- Select Size/Variant --</option>
+          </select>
+          <select id="ni_pkg_select" class="w-full border rounded-lg px-2 py-2 text-sm">
+            <option value="">-- Select Packaging --</option>
+          </select>
+        </div>
         <div class="grid grid-cols-2 gap-2">
-          <input id="ni_product" placeholder="Product Name *" class="border rounded px-2 py-1 text-xs col-span-2" />
           <input id="ni_hsn" placeholder="HSN Code" class="border rounded px-2 py-1 text-xs" />
           <input id="ni_batch" placeholder="Batch No" class="border rounded px-2 py-1 text-xs" />
           <input id="ni_exp" placeholder="Exp Date" class="border rounded px-2 py-1 text-xs" />
           <input id="ni_mfg" placeholder="Mfg Date" class="border rounded px-2 py-1 text-xs" />
-          <input id="ni_size" placeholder="Size" class="border rounded px-2 py-1 text-xs" />
-          <input id="ni_qty" type="number" placeholder="Quantity *" class="border rounded px-2 py-1 text-xs" />
-          <select id="ni_unit" class="border rounded px-2 py-1 text-xs">
-            <option>Pcs</option><option>Box</option><option>Kg</option><option>L</option><option>ml</option>
-          </select>
-          <input id="ni_price" type="number" placeholder="Price/Unit ₹ *" class="border rounded px-2 py-1 text-xs" />
-          <input id="ni_gst" type="number" placeholder="GST %" class="border rounded px-2 py-1 text-xs" value="18" />
+          <input id="ni_qty" type="number" placeholder="Quantity (boxes) *" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_price" type="number" placeholder="Price/box ₹ *" class="border rounded px-2 py-1 text-xs" />
+          <input id="ni_gst" type="number" placeholder="GST %" class="border rounded px-2 py-1 text-xs col-span-2" value="18" />
         </div>
         <button onclick="addPurchaseItem()" class="mt-2 w-full bg-green-700 text-white py-1 rounded-lg text-xs font-bold">+ Add Item</button>
       </div>
@@ -1609,29 +1618,64 @@ function showAddPurchase() {
   window._npItems = [];
 }
 
+function npSelectVariants() {
+  const pid = document.getElementById('ni_product_select').value;
+  const product = (window._npProducts || []).find(p => p.id === pid);
+  const variantSel = document.getElementById('ni_variant_select');
+  const pkgSel = document.getElementById('ni_pkg_select');
+  variantSel.innerHTML = '<option value="">-- Select Size/Variant --</option>' +
+    (product?.product_variants || []).map(v => `<option value="${v.id}">${v.bag_size}</option>`).join('');
+  pkgSel.innerHTML = '<option value="">-- Select Packaging --</option>';
+  if (product?.hsn_code) document.getElementById('ni_hsn').value = product.hsn_code;
+}
+
+function npSelectPackagings() {
+  const pid = document.getElementById('ni_product_select').value;
+  const vid = document.getElementById('ni_variant_select').value;
+  const product = (window._npProducts || []).find(p => p.id === pid);
+  const variant = (product?.product_variants || []).find(v => v.id === vid);
+  const pkgSel = document.getElementById('ni_pkg_select');
+  pkgSel.innerHTML = '<option value="">-- Select Packaging --</option>' +
+    (variant?.product_packagings || []).map(pk => `<option value="${pk.id}">${pk.box_label} (Stock: ${pk.stock_quantity})</option>`).join('');
+}
+
 function addPurchaseItem() {
-  const product = document.getElementById('ni_product').value.trim();
+  const pid = document.getElementById('ni_product_select').value;
+  const vid = document.getElementById('ni_variant_select').value;
+  const pkgId = document.getElementById('ni_pkg_select').value;
   const qty = parseFloat(document.getElementById('ni_qty').value) || 0;
   const price = parseFloat(document.getElementById('ni_price').value) || 0;
-  if (!product || !qty || !price) { alert('Product name, quantity and price are required!'); return; }
+  if (!pid || !vid || !pkgId) { alert('Please select product, variant and packaging!'); return; }
+  if (!qty || !price) { alert('Quantity and price are required!'); return; }
+  const product = (window._npProducts || []).find(p => p.id === pid);
+  const variant = (product?.product_variants || []).find(v => v.id === vid);
+  const pkg = (variant?.product_packagings || []).find(pk => pk.id === pkgId);
   const gst = parseFloat(document.getElementById('ni_gst').value) || 0;
   const total = qty * price * (1 + gst / 100);
   window._npItems = window._npItems || [];
   window._npItems.push({
-    product_name: product,
+    product_id: pid,
+    variant_id: vid,
+    pkg_id: pkgId,
+    product_name: product.name,
+    variant_name: variant.bag_size,
+    pkg_label: pkg.box_label,
     hsn_code: document.getElementById('ni_hsn').value.trim(),
     batch_number: document.getElementById('ni_batch').value.trim(),
     exp_date: document.getElementById('ni_exp').value.trim(),
     mfg_date: document.getElementById('ni_mfg').value.trim(),
-    size: document.getElementById('ni_size').value.trim(),
+    size: variant.bag_size,
     quantity: qty,
-    unit: document.getElementById('ni_unit').value,
+    unit: 'Box',
     unit_price: price,
     gst_percent: gst,
     total_price: total,
   });
   renderPurchaseItems();
-  ['ni_product','ni_hsn','ni_batch','ni_exp','ni_mfg','ni_size','ni_qty','ni_price'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('ni_product_select').value = '';
+  document.getElementById('ni_variant_select').innerHTML = '<option value="">-- Select Size/Variant --</option>';
+  document.getElementById('ni_pkg_select').innerHTML = '<option value="">-- Select Packaging --</option>';
+  ['ni_hsn','ni_batch','ni_exp','ni_mfg','ni_qty','ni_price'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   document.getElementById('ni_gst').value = '18';
 }
 
