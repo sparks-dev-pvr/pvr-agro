@@ -624,10 +624,10 @@ async function showAdminTab(tab) {
                 <div class="text-xs ${p.balance > 0 ? 'text-red-500' : 'text-green-600'}">${p.balance > 0 ? 'Due: ₹'+p.balance : 'Paid ✅'}</div>
               </div>
             </div>
-            <div class="flex gap-2 mt-3 flex-wrap">
-              <button onclick="generatePurchaseBill('${p.id}')" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-lg">🧾 Bill</button>
-              <button onclick="editPurchase('${p.id}')" class="bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-lg">✏️ Edit</button>
-              <button onclick="deletePurchase('${p.id}')" class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">🗑 Delete</button>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <button onclick="generatePurchaseBill('${p.id}')" class="bg-blue-100 text-blue-700 text-xs px-3 py-2 rounded-lg font-medium">🧾 Bill</button>
+              <button onclick="editPurchase('${p.id}')" class="bg-yellow-100 text-yellow-700 text-xs px-3 py-2 rounded-lg font-medium">✏️ Edit</button>
+              <button onclick="deletePurchase('${p.id}')" class="bg-red-100 text-red-700 text-xs px-3 py-2 rounded-lg font-medium">🗑 Delete</button>
             </div>
           </div>`;
         }).join('')}
