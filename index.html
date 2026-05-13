@@ -422,12 +422,14 @@ function renderAdminLogin() {
 function renderAdmin() {
   return `
   <div class="min-h-screen bg-gray-100">
-    <nav class="bg-green-700 text-white px-4 py-2 flex items-center justify-between">
-      <div class="flex items-center gap-2 font-bold text-lg">
+    <nav class="bg-green-700 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow">
+      <div class="flex items-center gap-2 font-bold text-base">
         <img src="${LOGO_URL}" class="h-8 w-8 rounded-full object-cover border border-white" />
-        PVR Agro — Admin
+        <span class="hidden sm:inline">PVR Agro — Admin</span>
+        <span class="sm:hidden">PVR Admin</span>
       </div>
-      <div class="flex gap-4 text-sm">
+      <button onclick="toggleAdminMenu()" class="sm:hidden bg-green-600 px-3 py-1 rounded-lg text-sm font-bold">☰ Menu</button>
+      <div class="hidden sm:flex gap-3 text-sm flex-wrap justify-end">
         <button onclick="showAdminTab('orders')" class="hover:underline">Orders</button>
         <button onclick="showAdminTab('products')" class="hover:underline">Products</button>
         <button onclick="showAdminTab('credit')" class="hover:underline">Credit</button>
@@ -438,10 +440,27 @@ function renderAdmin() {
         <button onclick="adminLogout()" class="hover:underline text-red-300">Logout</button>
       </div>
     </nav>
-    <div class="max-w-5xl mx-auto px-4 py-6">
+    <div id="admin_mobile_menu" class="hidden bg-green-800 text-white sm:hidden">
+      <div class="grid grid-cols-2 gap-1 p-3">
+        <button onclick="showAdminTab('orders');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">📦 Orders</button>
+        <button onclick="showAdminTab('products');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">🌿 Products</button>
+        <button onclick="showAdminTab('credit');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">💳 Credit</button>
+        <button onclick="showAdminTab('suppliers');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">🏢 Suppliers</button>
+        <button onclick="showAdminTab('purchases');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">🛒 Purchases</button>
+        <button onclick="showAdminTab('expenses');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">💸 Expenses</button>
+        <button onclick="showAdminTab('cashbank');toggleAdminMenu()" class="bg-green-700 rounded-lg px-3 py-3 text-sm font-medium text-left">🏦 Cash & Bank</button>
+        <button onclick="adminLogout()" class="bg-red-700 rounded-lg px-3 py-3 text-sm font-medium text-left">🚪 Logout</button>
+      </div>
+    </div>
+    <div class="max-w-5xl mx-auto px-3 py-4">
       <div id="admin_content">Loading...</div>
     </div>
   </div>`;
+}
+
+function toggleAdminMenu() {
+  const menu = document.getElementById('admin_mobile_menu');
+  if (menu) menu.classList.toggle('hidden');
 }
 
 async function loadProducts() {
