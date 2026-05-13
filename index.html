@@ -2033,6 +2033,7 @@ async function refreshSupplierDetail(supplierId) {
               <td class="px-2 py-2 text-right font-semibold ${!row.isDebit ? 'text-green-600' : 'text-gray-300'}">${!row.isDebit ? row.amount.toLocaleString('en-IN') : '—'}</td>
               <td class="px-2 py-2 text-right font-bold whitespace-nowrap ${row.runningBalance > 0 ? 'text-red-500' : 'text-green-600'}">${Math.abs(row.runningBalance).toLocaleString('en-IN')} <span class="text-gray-400 font-normal">${row.runningBalance > 0 ? 'Dr' : 'Cr'}</span></td>
               <td class="px-2 py-2 text-center whitespace-nowrap">
+                <button onclick="editSupplierEntry('${row.entryId}','${supplierId}',${row.amount},'${row.note}')" class="text-blue-400 mr-1">✏️</button>
                 <button onclick="deleteSupplierEntry('${row.entryId}','${supplierId}')" class="text-red-400">🗑</button>
               </td>
             </tr>`).join('')}
