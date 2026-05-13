@@ -2603,18 +2603,6 @@ async function loadStockReport() {
   if (!result) return;
   result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
   const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').order('name');
-  const { data: purchaseItems } = await db.from('purchase_items').select('*');
-
-  // Build avg purchase price per pkg_id from purchase_items
-  const pkgCostMap = {};
-  (purchaseItems || []).forEach(pi => {
-    if (!pi.size) return;
-    if (!pkgCostMap[pi.product_name]) pkgCostMap[pi.product_name] = {};
-    if (!pkgCostMap[pi.product_name][pi.size]) pkgCostMap[pi.product_name][pi.size] = { total: 0, qty: 0 };
-    pkgCostMap[pi.product_name][pi.size].total += (pi.unit_price || 0) * (pi.quantity || 0);
-    pkgCostMap[pi.product_name][pi.size].qty += (pi.quantity || 0);
-  });
-
   let totalPurchaseValue = 0;
   let totalSaleValue = 0;
   let rows = [];
@@ -2625,13 +2613,12 @@ async function loadStockReport() {
         const stock = pk.stock_quantity || 0;
         if (stock === 0) return;
         const salePrice = pk.price_per_box || 0;
-        const costData = pkgCostMap[p.name] && pkgCostMap[p.name][v.bag_size];
-        const avgCost = costData && costData.qty > 0 ? costData.total / costData.qty : 0;
-        const purchaseVal = avgCost * stock;
+        const costPrice = pk.cost_price || 0;
+        const purchaseVal = costPrice * stock;
         const saleVal = salePrice * stock;
         totalPurchaseValue += purchaseVal;
         totalSaleValue += saleVal;
-        rows.push({ name: p.name, size: v.bag_size, label: pk.box_label, stock, avgCost, salePrice, purchaseVal, saleVal });
+        rows.push({ name: p.name, size: v.bag_size, label: pk.box_label, stock, avgCost: costPrice, salePrice, purchaseVal, saleVal });
       });
     });
   });
