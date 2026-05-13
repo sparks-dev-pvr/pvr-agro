@@ -2391,6 +2391,43 @@ async function deleteSupplierEntry(entryId, supplierId) {
   await refreshSupplierDetail(supplierId);
 }
 
+function getISTDateString(date) {
+  const ist = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+  return ist.toISOString().split('T')[0];
+}
+
+function setMonthRange(which) {
+  const now = new Date();
+  let from, to;
+  if (which === 'this') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  }
+  const fromEl = document.getElementById('rep_from');
+  const toEl = document.getElementById('rep_to');
+  if (fromEl) fromEl.value = getISTDateString(from);
+  if (toEl) toEl.value = getISTDateString(to);
+}
+
+function setSalesRange(which) {
+  const now = new Date();
+  let from, to;
+  if (which === 'this') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  }
+  const fromEl = document.getElementById('sales_from');
+  const toEl = document.getElementById('sales_to');
+  if (fromEl) fromEl.value = getISTDateString(from);
+  if (toEl) toEl.value = getISTDateString(to);
+}
+
 async function showReportsTab(subTab) {
   const content = document.getElementById('admin_content');
   if (!content) return;
