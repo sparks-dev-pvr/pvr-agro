@@ -2616,7 +2616,7 @@ async function loadStockReport() {
         <td class="px-2 py-2 text-right text-red-500">${r.avgCost > 0 ? fmt(r.purchaseVal) : '—'}</td>
         <td class="px-2 py-2 text-right text-green-700 font-bold">${fmt(r.saleVal)}</td>
       </tr>`).join('') +
-      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="5" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right text-red-300">${fmt(totalPurchaseValue)}</td><td class="px-2 py-2 text-right text-green-300">${fmt(totalSaleValue)}</td></tr></tfoot></table></div>'}
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="5" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right text-red-300">${fmt(totalPurchaseValue)}</td><td class="px-2 py-2 text-right text-green-300">${fmt(totalSaleValue)}</td></tr></tfoot></table></div>`}
     </div>`;
 }
 
