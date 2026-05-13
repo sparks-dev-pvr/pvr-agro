@@ -2635,6 +2635,17 @@ async function loadStockReport() {
 
   const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
+  const zeroStock = [];
+  (products || []).forEach(p => {
+    (p.product_variants || []).forEach(v => {
+      (v.product_packagings || []).forEach(pk => {
+        if ((pk.stock_quantity || 0) === 0) {
+          zeroStock.push({ name: p.name, size: v.bag_size, label: pk.box_label });
+        }
+      });
+    });
+  });
+
   result.innerHTML = `
     <div class="grid grid-cols-2 gap-3 mb-4">
       <div class="bg-red-50 rounded-xl shadow p-4 text-center">
