@@ -1562,7 +1562,8 @@ function filterPurchases() {
 async function showAddPurchase() {
   const form = document.getElementById('add_purchase_form');
   if (form.innerHTML !== '') { form.innerHTML = ''; return; }
-  const { data: suppliersData } = await db.from('suppliers').select('*').order('name');
+  const { data: suppliersData, error: supError } = await db.from('suppliers').select('*').order('name');
+  console.log('Suppliers loaded:', suppliersData, supError);
   const suppliers = suppliersData || [];
   const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').eq('is_available', true).order('name');
   window._npProducts = products || [];
