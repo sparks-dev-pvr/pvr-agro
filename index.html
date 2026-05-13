@@ -1977,6 +1977,22 @@ async function deleteCashBankEntry(entryId) {
   showAdminTab('cashbank');
 }
 
+function editAgingDays(customerId, customerName) {
+  const days = prompt('Edit number of days since credit for ' + customerName + ':\n(Enter how many days ago the oldest unpaid amount started)');
+  if (!days || isNaN(days)) return;
+  const d = parseInt(days);
+  let bracket = '0-30 days';
+  let color = 'text-green-600';
+  if (d > 90) { bracket = '90+ days'; color = 'text-red-700 font-bold'; }
+  else if (d > 60) { bracket = '61-90 days'; color = 'text-red-500'; }
+  else if (d > 30) { bracket = '31-60 days'; color = 'text-orange-500'; }
+  const daysEl = document.getElementById('aging_days_' + customerId);
+  const bracketEl = document.getElementById('aging_bracket_' + customerId);
+  if (daysEl) daysEl.textContent = d;
+  if (bracketEl) { bracketEl.textContent = bracket; bracketEl.className = 'px-3 py-2 text-center ' + color; }
+  localStorage.setItem('aging_days_' + customerId, d);
+}
+
 async function showAgingReport() {
   const panel = document.getElementById('aging_report_panel');
   if (!panel) return;
