@@ -710,14 +710,14 @@ async function showAdminTab(tab) {
       </div>
       <div class="bg-white rounded-xl shadow p-4 mb-4">
         <div class="font-bold mb-3">Manual Entry</div>
-        <div class="grid grid-cols-2 gap-2 mb-2">
-          <select id="cb_account" class="border rounded-lg px-3 py-2 text-sm">
-            <option value="cash">Cash</option>
-            <option value="bank">Bank</option>
+        <div class="space-y-2 mb-2">
+          <select id="cb_account" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="cash">💵 Cash</option>
+            <option value="bank">🏦 Bank</option>
           </select>
-          <select id="cb_type" class="border rounded-lg px-3 py-2 text-sm">
-            <option value="in">Money In (+)</option>
-            <option value="out">Money Out (-)</option>
+          <select id="cb_type" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="in">➕ Money In (+)</option>
+            <option value="out">➖ Money Out (-)</option>
           </select>
         </div>
         <input id="cb_amount" type="number" placeholder="Amount ₹" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
