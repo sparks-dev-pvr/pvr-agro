@@ -2391,6 +2391,626 @@ async function deleteSupplierEntry(entryId, supplierId) {
   await refreshSupplierDetail(supplierId);
 }
 
+async function showReportsTab(subTab) {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  window._reportsSubTab = subTab || window._reportsSubTab || 'monthly';
+  const activeTab = window._reportsSubTab;
+
+  const tabBtn = (id, label, icon) => `<button onclick="showReportsTab('${id}')"
+    class="px-3 py-2 rounded-xl text-sm font-medium border transition text-center
+    ${activeTab === id ? 'bg-green-700 text-white border-transparent' : 'bg-white text-gray-600 border-gray-300'}">
+    ${icon} ${label}</button>`;
+
+  const tabsHTML = `
+    <div class="flex gap-2 mb-5 flex-wrap">
+      ${tabBtn('monthly','Monthly Report','📅')}
+      ${tabBtn('stock','Stock Value','📦')}
+      ${tabBtn('sales','Sales Summary','📈')}
+    </div>`;
+
+  if (activeTab === 'monthly') {
+    content.innerHTML = `<h2 class="text-xl font-bold mb-4">Reports</h2>${tabsHTML}
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3 text-gray-700">📅 Monthly Report</div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div><label class="text-xs text-gray-500">From Date</label>
+            <input type="date" id="rep_from" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+          <div><label class="text-xs text-gray-500">To Date</label>
+            <input type="date" id="rep_to" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+        </div>
+        <button onclick="loadMonthlyReport()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold text-sm">Generate Report</button>
+      </div>
+      <div id="monthly_report_result"></div>`;
+
+  } else if (activeTab === 'stock') {
+    content.innerHTML = `<h2 class="text-xl font-bold mb-4">Reports</h2>${tabsHTML}
+      <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-center">
+        <div class="font-bold text-gray-700">📦 Stock Value Report</div>
+        <button onclick="loadStockReport()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold">Load</button>
+      </div>
+      <div id="stock_report_result"></div>`;
+    loadStockReport();
+
+  } else if (activeTab === 'sales') {
+    content.innerHTML = `<h2 class="text-xl font-bold mb-4">Reports</h2>${tabsHTML}
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3 text-gray-700">📈 Sales Summary</div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          <div><label class="text-xs text-gray-500">From Date</label>
+            <input type="date" id="sales_from" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+          <div><label class="text-xs text-gray-500">To Date</label>
+            <input type="date" id="sales_to" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+        </div>
+        <button onclick="loadSalesReport()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold text-sm">Generate Report</button>
+      </div>
+      <div id="sales_report_result"></div>`;
+  }
+}
+
+async function loadMonthlyReport() {
+  const from = document.getElementById('rep_from').value;
+  const to = document.getElementById('rep_to').value;
+  if (!from || !to) { alert('Please select both From and To dates!'); return; }
+  const result = document.getElementById('monthly_report_result');
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const fromDT = from + 'T00:00:00';
+  const toDT = to + 'T23:59:59';
+
+  const [{ data: orders }, { data: purchases }, { data: expenses }, { data: cbLedger }] = await Promise.all([
+    db.from('orders').select('*, customers(name)').gte('created_at', fromDT).lte('created_at', toDT).order('created_at'),
+    db.from('purchases').select('*').gte('created_at', fromDT).lte('created_at', toDT).order('created_at'),
+    db.from('expenses').select('*').gte('expense_date', from).lte('expense_date', to).order('expense_date'),
+    db.from('cash_bank_ledger').select('*').order('created_at', { ascending: true }),
+  ]);
+
+  const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalPurchases = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
+  const totalExpenses = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+
+  // Opening balance = last entry before 'from' date for each account
+  const cashAll = (cbLedger || []).filter(l => l.account_type === 'cash');
+  const bankAll = (cbLedger || []).filter(l => l.account_type === 'bank');
+  const cashBefore = cashAll.filter(l => l.created_at < fromDT);
+  const bankBefore = bankAll.filter(l => l.created_at < fromDT);
+  const cashInPeriod = cashAll.filter(l => l.created_at >= fromDT && l.created_at <= toDT);
+  const bankInPeriod = bankAll.filter(l => l.created_at >= fromDT && l.created_at <= toDT);
+  const openCash = cashBefore.length > 0 ? cashBefore[cashBefore.length - 1].running_balance : 0;
+  const openBank = bankBefore.length > 0 ? bankBefore[bankBefore.length - 1].running_balance : 0;
+  const closeCash = cashInPeriod.length > 0 ? cashInPeriod[cashInPeriod.length - 1].running_balance : openCash;
+  const closeBank = bankInPeriod.length > 0 ? bankInPeriod[bankInPeriod.length - 1].running_balance : openBank;
+
+  const cashIn = cashInPeriod.filter(l => l.entry_type === 'in').reduce((s, l) => s + l.amount, 0);
+  const cashOut = cashInPeriod.filter(l => l.entry_type === 'out').reduce((s, l) => s + l.amount, 0);
+  const bankIn = bankInPeriod.filter(l => l.entry_type === 'in').reduce((s, l) => s + l.amount, 0);
+  const bankOut = bankInPeriod.filter(l => l.entry_type === 'out').reduce((s, l) => s + l.amount, 0);
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+
+  result.innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-green-700 mb-3">📊 Summary (${from} to ${to})</div>
+        <div class="grid grid-cols-3 gap-3 mb-2">
+          <div class="bg-green-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500">Total Sales</div>
+            <div class="font-bold text-green-700">${fmt(totalSales)}</div>
+            <div class="text-xs text-gray-400">${(orders||[]).length} orders</div>
+          </div>
+          <div class="bg-red-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500">Total Purchases</div>
+            <div class="font-bold text-red-600">${fmt(totalPurchases)}</div>
+            <div class="text-xs text-gray-400">${(purchases||[]).length} bills</div>
+          </div>
+          <div class="bg-orange-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500">Total Expenses</div>
+            <div class="font-bold text-orange-600">${fmt(totalExpenses)}</div>
+            <div class="text-xs text-gray-400">${(expenses||[]).length} entries</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-blue-700 mb-3">🏦 Cash & Bank</div>
+        <table class="w-full text-sm">
+          <thead><tr class="bg-gray-100 text-gray-600 text-xs"><th class="px-3 py-2 text-left"></th><th class="px-3 py-2 text-right">💵 Cash</th><th class="px-3 py-2 text-right">🏦 Bank</th></tr></thead>
+          <tbody>
+            <tr class="border-b"><td class="px-3 py-2 text-gray-500">Opening Balance</td><td class="px-3 py-2 text-right">${fmt(openCash)}</td><td class="px-3 py-2 text-right">${fmt(openBank)}</td></tr>
+            <tr class="border-b"><td class="px-3 py-2 text-green-600">+ Money In</td><td class="px-3 py-2 text-right text-green-600">${fmt(cashIn)}</td><td class="px-3 py-2 text-right text-green-600">${fmt(bankIn)}</td></tr>
+            <tr class="border-b"><td class="px-3 py-2 text-red-500">- Money Out</td><td class="px-3 py-2 text-right text-red-500">${fmt(cashOut)}</td><td class="px-3 py-2 text-right text-red-500">${fmt(bankOut)}</td></tr>
+            <tr class="font-bold bg-gray-50"><td class="px-3 py-2">Closing Balance</td><td class="px-3 py-2 text-right text-blue-700">${fmt(closeCash)}</td><td class="px-3 py-2 text-right text-blue-700">${fmt(closeBank)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">🧾 Sales (${(orders||[]).length} orders)</div>
+        ${(orders||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No sales in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-right">Amount</th><th class="px-2 py-2 text-center">Payment</th></tr></thead><tbody>' +
+        (orders||[]).map((o,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${new Date(o.created_at).toLocaleDateString('en-IN')}</td><td class="px-2 py-2">${o.customers?.name||'Unknown'}</td><td class="px-2 py-2 text-right font-bold text-green-700">${fmt(o.total_amount)}</td><td class="px-2 py-2 text-center text-xs text-blue-600">${o.payment_method}</td></tr>`).join('') +
+        `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="2" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td><td></td></tr></tfoot></table></div>'}
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">🛒 Purchases (${(purchases||[]).length} bills)</div>
+        ${(purchases||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No purchases in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-red-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Supplier</th><th class="px-2 py-2 text-left">Bill No</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+        (purchases||[]).map((p,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${p.bill_date||new Date(p.created_at).toLocaleDateString('en-IN')}</td><td class="px-2 py-2">${p.supplier_name||'-'}</td><td class="px-2 py-2 text-gray-400">${p.bill_number||'-'}</td><td class="px-2 py-2 text-right font-bold text-red-600">${fmt(p.total_amount)}</td></tr>`).join('') +
+        `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="3" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${fmt(totalPurchases)}</td></tr></tfoot></table></div>'}
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">💸 Expenses (${(expenses||[]).length} entries)</div>
+        ${(expenses||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No expenses in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-orange-600 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Category</th><th class="px-2 py-2 text-left">Description</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+        (expenses||[]).map((e,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${e.expense_date||'-'}</td><td class="px-2 py-2">${e.category||'-'}</td><td class="px-2 py-2 text-gray-400">${e.description||'-'}</td><td class="px-2 py-2 text-right font-bold text-orange-600">${fmt(e.amount)}</td></tr>`).join('') +
+        `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="3" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${fmt(totalExpenses)}</td></tr></tfoot></table></div>'}
+      </div>
+    </div>`;
+}
+
+async function loadStockReport() {
+  const result = document.getElementById('stock_report_result');
+  if (!result) return;
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').order('name');
+  const { data: purchaseItems } = await db.from('purchase_items').select('*');
+
+  // Build avg purchase price per pkg_id from purchase_items
+  const pkgCostMap = {};
+  (purchaseItems || []).forEach(pi => {
+    if (!pi.size) return;
+    if (!pkgCostMap[pi.product_name]) pkgCostMap[pi.product_name] = {};
+    if (!pkgCostMap[pi.product_name][pi.size]) pkgCostMap[pi.product_name][pi.size] = { total: 0, qty: 0 };
+    pkgCostMap[pi.product_name][pi.size].total += (pi.unit_price || 0) * (pi.quantity || 0);
+    pkgCostMap[pi.product_name][pi.size].qty += (pi.quantity || 0);
+  });
+
+  let totalPurchaseValue = 0;
+  let totalSaleValue = 0;
+  let rows = [];
+
+  (products || []).forEach(p => {
+    (p.product_variants || []).forEach(v => {
+      (v.product_packagings || []).forEach(pk => {
+        const stock = pk.stock_quantity || 0;
+        if (stock === 0) return;
+        const salePrice = pk.price_per_box || 0;
+        const costData = pkgCostMap[p.name] && pkgCostMap[p.name][v.bag_size];
+        const avgCost = costData && costData.qty > 0 ? costData.total / costData.qty : 0;
+        const purchaseVal = avgCost * stock;
+        const saleVal = salePrice * stock;
+        totalPurchaseValue += purchaseVal;
+        totalSaleValue += saleVal;
+        rows.push({ name: p.name, size: v.bag_size, label: pk.box_label, stock, avgCost, salePrice, purchaseVal, saleVal });
+      });
+    });
+  });
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  result.innerHTML = `
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-red-50 rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500">Total Purchase Value</div>
+        <div class="font-bold text-red-600 text-lg">${fmt(totalPurchaseValue)}</div>
+        <div class="text-xs text-gray-400">(cost price × stock)</div>
+      </div>
+      <div class="bg-green-50 rounded-xl shadow p-4 text-center">
+        <div class="text-xs text-gray-500">Total Sale Value</div>
+        <div class="font-bold text-green-700 text-lg">${fmt(totalSaleValue)}</div>
+        <div class="text-xs text-gray-400">(sell price × stock)</div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="font-bold text-gray-700 mb-3">📦 Stock by Product (${rows.length} variants with stock)</div>
+      ${rows.length === 0 ? '<div class="text-gray-400 text-center py-4">No stock found</div>' :
+      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product</th><th class="px-2 py-2 text-left">Size · Pack</th><th class="px-2 py-2 text-right">Stock</th><th class="px-2 py-2 text-right">Avg Cost/box</th><th class="px-2 py-2 text-right">Sale/box</th><th class="px-2 py-2 text-right">Purchase Value</th><th class="px-2 py-2 text-right">Sale Value</th></tr></thead><tbody>' +
+      rows.map((r,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b">
+        <td class="px-2 py-2 font-medium">${r.name}</td>
+        <td class="px-2 py-2 text-gray-500">${r.size} · ${r.label}</td>
+        <td class="px-2 py-2 text-right font-bold">${r.stock}</td>
+        <td class="px-2 py-2 text-right text-red-500">${r.avgCost > 0 ? fmt(r.avgCost) : '—'}</td>
+        <td class="px-2 py-2 text-right text-green-600">${fmt(r.salePrice)}</td>
+        <td class="px-2 py-2 text-right text-red-500">${r.avgCost > 0 ? fmt(r.purchaseVal) : '—'}</td>
+        <td class="px-2 py-2 text-right text-green-700 font-bold">${fmt(r.saleVal)}</td>
+      </tr>`).join('') +
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="5" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right text-red-300">${fmt(totalPurchaseValue)}</td><td class="px-2 py-2 text-right text-green-300">${fmt(totalSaleValue)}</td></tr></tfoot></table></div>'}
+    </div>`;
+}
+
+async function loadSalesReport() {
+  const from = document.getElementById('sales_from').value;
+  const to = document.getElementById('sales_to').value;
+  if (!from || !to) { alert('Please select both From and To dates!'); return; }
+  const result = document.getElementById('sales_report_result');
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const fromDT = from + 'T00:00:00';
+  const toDT = to + 'T23:59:59';
+
+  const { data: orders } = await db.from('orders').select('*, customers(name, phone)').gte('created_at', fromDT).lte('created_at', toDT);
+  const orderIds = (orders || []).map(o => o.id);
+  let orderItems = [];
+  if (orderIds.length > 0) {
+    const { data: items } = await db.from('order_items').select('*').in('order_id', orderIds);
+    orderItems = items || [];
+  }
+
+  // By Product
+  const byProduct = {};
+  orderItems.forEach(item => {
+    const key = (item.product_name || 'Unknown') + ' — ' + (item.variant_name || '');
+    if (!byProduct[key]) byProduct[key] = { qty: 0, amount: 0 };
+    byProduct[key].qty += item.quantity || 0;
+    byProduct[key].amount += item.total_price || 0;
+  });
+
+  // By Customer
+  const byCustomer = {};
+  (orders || []).forEach(o => {
+    const name = o.customers?.name || 'Unknown';
+    const phone = o.customers?.phone || '';
+    const key = name + '||' + phone;
+    if (!byCustomer[key]) byCustomer[key] = { name, phone, orders: 0, amount: 0 };
+    byCustomer[key].orders += 1;
+    byCustomer[key].amount += o.total_amount || 0;
+  });
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+  const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const productRows = Object.entries(byProduct).sort((a, b) => b[1].amount - a[1].amount);
+  const customerRows = Object.entries(byCustomer).sort((a, b) => b[1].amount - a[1].amount);
+
+  result.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-3 mb-4 text-center">
+      <div class="text-xs text-gray-500">Total Sales (${from} to ${to})</div>
+      <div class="font-bold text-green-700 text-2xl">${fmt(totalSales)}</div>
+      <div class="text-xs text-gray-400">${(orders||[]).length} orders · ${orderItems.length} line items</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <div class="font-bold text-gray-700 mb-3">🌿 By Product</div>
+      ${productRows.length === 0 ? '<div class="text-gray-400 text-center py-3">No data</div>' :
+      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product · Size</th><th class="px-2 py-2 text-right">Qty Sold</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+      productRows.map(([key, d], i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 font-medium">${key}</td><td class="px-2 py-2 text-right">${d.qty}</td><td class="px-2 py-2 text-right font-bold text-green-700">${fmt(d.amount)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${productRows.reduce((s,[,d])=>s+d.qty,0)}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>'}
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <div class="font-bold text-gray-700 mb-3">👤 By Customer</div>
+      ${customerRows.length === 0 ? '<div class="text-gray-400 text-center py-3">No data</div>' :
+      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-blue-700 text-white"><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-left">Phone</th><th class="px-2 py-2 text-right">Orders</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+      customerRows.map(([, d], i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 font-medium">${d.name}</td><td class="px-2 py-2 text-gray-400">${d.phone}</td><td class="px-2 py-2 text-right">${d.orders}</td><td class="px-2 py-2 text-right font-bold text-blue-700">${fmt(d.amount)}</td></tr>`).join('') +
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="2" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${(orders||[]).length}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>'}
+    </div>`;
+}
+
+async function showAdminTab(tab) {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  if (tab === 'reports') { window._reportsSubTab = 'monthly'; showReportsTab('monthly'); return; }
+  content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
+
+  if (tab === 'orders') {
+    const { data: orders } = await db.from('orders').select('*, customers(name, phone)').order('created_at', { ascending: false });
+    const { data: items } = await db.from('order_items').select('*');
+    window._allOrders = orders || [];
+    window._allItems = items || [];
+    renderOrdersTab('pending');
+    return;
+
+  } else if (tab === 'products') {
+    const { data: products } = await db.from('products').select('*').order('name');
+    const { data: variants } = await db.from('product_variants').select('*');
+    const { data: packagings } = await db.from('product_packagings').select('*');
+    state.adminProducts = (products || []).map(p => ({
+      ...p,
+      product_variants: (variants || []).filter(v => v.product_id === p.id).map(v => ({
+        ...v,
+        packagings: (packagings || []).filter(pk => pk.variant_id === v.id)
+      }))
+    }));
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Products</h2>
+        <button onclick="showAddProduct()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Product</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="product_search" type="text" placeholder="Search products..."
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+          oninput="filterAdminProducts()" />
+      </div>
+      <div id="add_product_form"></div>
+      <div class="space-y-3">
+        ${state.adminProducts.map(p => {
+          const s = getCategoryStyle(p.category);
+          return `
+          <div class="bg-white rounded-xl shadow p-4 admin-product-card" data-name="${p.name.toLowerCase()}" data-company="${(p.company_name||'').toLowerCase()}">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-3">
+                ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl">${s.icon}</div>`}
+                <div>
+                  <div class="font-bold">${p.name}</div>
+                  <div class="text-sm text-gray-500">${p.category}${p.hsn_code ? ' · HSN: ' + p.hsn_code : ''}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600">✏️ Edit</button>
+                <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs ${p.is_available ? 'text-orange-400 hover:text-orange-600' : 'text-green-500 hover:text-green-700'}">${p.is_available ? '🚫 Mark Unavailable' : '✅ Mark Available'}</button>
+                <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
+              </div>
+            </div>
+            <div class="mt-2 space-y-1">
+              ${(p.product_variants || []).map(v => `
+                <div class="text-xs text-gray-600 ml-2">
+                  <span class="font-medium">${v.bag_size}</span>
+                  ${(v.packagings || []).map(pk => `
+                    <span class="ml-2 text-gray-500">${pk.box_label}: ₹${pk.price_per_box}/box · ₹${pk.price_per_unit || '-'}/unit (Stock: ${pk.stock_quantity})</span>
+                  `).join('')}
+                </div>`).join('')}
+            </div>
+          </div>`; }).join('')}
+      </div>`;
+
+  } else if (tab === 'suppliers') {
+    const { data: suppliers } = await db.from('suppliers').select('*').order('name');
+    const { data: sLedger } = await db.from('supplier_ledger').select('*');
+    window._allSuppliers = suppliers || [];
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Suppliers</h2>
+        <button onclick="showAddSupplier()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Supplier</button>
+      </div>
+      <div id="add_supplier_form"></div>
+      <div class="space-y-3">
+        ${(suppliers || []).map(s => {
+          const ledger = (sLedger || []).filter(l => l.supplier_id === s.id);
+          const totalBilled = ledger.filter(l => l.type === 'debit').reduce((sum, l) => sum + l.amount, 0);
+          const totalPaid = ledger.filter(l => l.type === 'credit').reduce((sum, l) => sum + l.amount, 0);
+          const balance = totalBilled - totalPaid;
+          return `
+          <div class="bg-white rounded-xl shadow p-4" id="supplier_card_${s.id}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-lg">${s.name}</div>
+                <div class="text-sm text-gray-500">${s.phone || ''}</div>
+                <div class="text-xs text-gray-400">${s.address || ''}${s.gst_number ? ' · GST: ' + s.gst_number : ''}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-gray-400">Total Billed: ₹${totalBilled.toLocaleString('en-IN')}</div>
+                <div class="text-xs text-green-600">Total Paid: ₹${totalPaid.toLocaleString('en-IN')}</div>
+                <div class="font-bold text-lg ${balance > 0 ? 'text-red-500' : 'text-green-600'}">
+                  ${balance > 0 ? 'You Owe: ₹' + balance.toLocaleString('en-IN') : 'Settled ✅'}
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-3">
+              <button onclick="toggleSupplierDetail('${s.id}')" class="bg-gray-100 text-gray-700 text-xs px-3 py-2 rounded-lg font-medium">📋 Statement</button>
+              <button onclick="recordSupplierPayment('${s.id}','${s.name}',${balance})" class="bg-green-700 text-white text-xs px-3 py-2 rounded-lg font-medium">💰 Payment</button>
+              <button onclick="editSupplier('${s.id}')" class="bg-blue-100 text-blue-700 text-xs px-3 py-2 rounded-lg font-medium">✏️ Edit</button>
+              <button onclick="deleteSupplier('${s.id}')" class="bg-red-100 text-red-700 text-xs px-3 py-2 rounded-lg font-medium">🗑 Delete</button>
+            </div>
+            <div id="supplier_detail_${s.id}" class="hidden mt-4"></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'purchases') {
+    const { data: purchases } = await db.from('purchases').select('*').order('created_at', { ascending: false });
+    const { data: purchaseItems } = await db.from('purchase_items').select('*');
+    window._allPurchases = purchases || [];
+    window._allPurchaseItems = purchaseItems || [];
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Purchases</h2>
+        <button onclick="showAddPurchase()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ New Purchase</button>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="purchase_search" type="text" placeholder="Search by supplier, product or bill no..."
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+          oninput="filterPurchases()" />
+      </div>
+      <div id="add_purchase_form"></div>
+      <div class="space-y-3" id="purchases_list">
+        ${(purchases || []).map(p => {
+          const items = (purchaseItems || []).filter(i => i.purchase_id === p.id);
+          return `
+          <div class="bg-white rounded-xl shadow p-4 purchase-card" data-supplier="${(p.supplier_name||'').toLowerCase()}" data-billno="${(p.bill_number||'').toLowerCase()}" data-products="${(purchaseItems||[]).filter(i=>i.purchase_id===p.id).map(i=>i.product_name||'').join(' ').toLowerCase()}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-lg">${p.supplier_name || 'Unknown'}</div>
+                <div class="text-sm text-gray-500">Bill: ${p.bill_number || '-'} · ${p.bill_date || ''}</div>
+                <div class="text-xs text-gray-400">${items.map(i => i.product_name + ' x' + i.quantity).join(', ')}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-green-700">₹${(p.total_amount||0).toLocaleString('en-IN')}</div>
+                <div class="text-xs text-blue-600">${p.payment_method || ''}</div>
+                <div class="text-xs ${p.balance > 0 ? 'text-red-500' : 'text-green-600'}">${p.balance > 0 ? 'Due: ₹'+p.balance : 'Paid ✅'}</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <button onclick="generatePurchaseBill('${p.id}')" class="bg-blue-100 text-blue-700 text-xs px-3 py-2 rounded-lg font-medium">🧾 Bill</button>
+              <button onclick="editPurchase('${p.id}')" class="bg-yellow-100 text-yellow-700 text-xs px-3 py-2 rounded-lg font-medium">✏️ Edit</button>
+              <button onclick="deletePurchase('${p.id}')" class="bg-red-100 text-red-700 text-xs px-3 py-2 rounded-lg font-medium">🗑 Delete</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'expenses') {
+    const { data: expenses } = await db.from('expenses').select('*').order('expense_date', { ascending: false });
+    window._allExpenses = expenses || [];
+    const totalCash = (expenses||[]).filter(e=>e.paid_via==='cash').reduce((s,e)=>s+e.amount,0);
+    const totalBank = (expenses||[]).filter(e=>e.paid_via==='bank').reduce((s,e)=>s+e.amount,0);
+    const total = (expenses||[]).reduce((s,e)=>s+e.amount,0);
+    content.innerHTML = `
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Expenses</h2>
+        <button onclick="showAddExpense()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Expense</button>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">Total</div>
+          <div class="font-bold text-red-500 text-sm">₹${total.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">💵 Cash</div>
+          <div class="font-bold text-orange-500 text-sm">₹${totalCash.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-3 text-center">
+          <div class="text-xs text-gray-400">🏦 Bank</div>
+          <div class="font-bold text-blue-500 text-sm">₹${totalBank.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button onclick="showExpenseReport('monthly')" class="bg-purple-100 text-purple-700 text-xs px-2 py-2 rounded-lg font-medium">📊 Monthly</button>
+        <button onclick="showExpenseReport('category')" class="bg-blue-100 text-blue-700 text-xs px-2 py-2 rounded-lg font-medium">📂 Category</button>
+        <button onclick="showExpenseReport('cashflow')" class="bg-green-100 text-green-700 text-xs px-2 py-2 rounded-lg font-medium">💰 Cash Flow</button>
+      </div>
+      <div id="expense_report_panel" class="mb-4"></div>
+      <div id="add_expense_form"></div>
+      <div class="space-y-3">
+        ${(expenses||[]).map(e => `
+          <div class="bg-white rounded-xl shadow p-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold">${e.category || 'Expense'}</div>
+                <div class="text-sm text-gray-500">${e.description || ''}</div>
+                <div class="text-xs text-gray-400">${e.expense_date || ''} · via ${e.paid_via}</div>
+                ${e.notes ? `<div class="text-xs text-gray-400">${e.notes}</div>` : ''}
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-red-500">₹${(e.amount||0).toLocaleString('en-IN')}</div>
+                <div class="flex gap-1 mt-2">
+                  <button onclick="editExpense('${e.id}')" class="text-blue-400 text-xs">✏️</button>
+                  <button onclick="deleteExpense('${e.id}')" class="text-red-400 text-xs">🗑</button>
+                </div>
+              </div>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'cashbank') {
+    const cbPass = prompt('Enter Cash & Bank password:');
+    if (!cbPass || cbPass.trim() !== '74820409') { alert('Wrong password!'); return; }
+    const { data: ledger } = await db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false });
+    const cashLedger = (ledger||[]).filter(l=>l.account_type==='cash');
+    const bankLedger = (ledger||[]).filter(l=>l.account_type==='bank');
+    const cashBalance = cashLedger.length > 0 ? cashLedger[0].running_balance : 0;
+    const bankBalance = bankLedger.length > 0 ? bankLedger[0].running_balance : 0;
+    content.innerHTML = `
+      <h2 class="text-xl font-bold mb-4">Cash & Bank</h2>
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="bg-white rounded-xl shadow p-4 text-center border-2 border-orange-200">
+          <div class="text-xs text-gray-500 mb-1">💵 Cash in Hand</div>
+          <div class="text-xl font-bold text-orange-600">₹${cashBalance.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4 text-center border-2 border-blue-200">
+          <div class="text-xs text-gray-500 mb-1">🏦 Bank Balance</div>
+          <div class="text-xl font-bold text-blue-600">₹${bankBalance.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Set Opening Balance</div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <div class="border rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">💵 Cash Opening</div>
+            <input id="cash_opening" type="number" placeholder="₹0" class="w-full text-center border rounded px-2 py-1 text-sm" />
+            <button onclick="setOpeningBalance('cash')" class="mt-2 w-full bg-orange-500 text-white py-1 rounded-lg text-xs font-bold">Set</button>
+          </div>
+          <div class="border rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-500 mb-1">🏦 Bank Opening</div>
+            <input id="bank_opening" type="number" placeholder="₹0" class="w-full text-center border rounded px-2 py-1 text-sm" />
+            <button onclick="setOpeningBalance('bank')" class="mt-2 w-full bg-blue-500 text-white py-1 rounded-lg text-xs font-bold">Set</button>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Manual Entry</div>
+        <div class="space-y-2 mb-2">
+          <select id="cb_account" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="cash">💵 Cash</option>
+            <option value="bank">🏦 Bank</option>
+          </select>
+          <select id="cb_type" class="w-full border rounded-lg px-3 py-2 text-sm">
+            <option value="in">➕ Money In (+)</option>
+            <option value="out">➖ Money Out (-)</option>
+          </select>
+        </div>
+        <input id="cb_amount" type="number" placeholder="Amount ₹" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
+        <input id="cb_note" placeholder="Note" class="w-full border rounded-lg px-3 py-2 text-sm mb-2" />
+        <button onclick="saveCashBankEntry()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Save Entry</button>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold mb-3">Transfer Cash ↔ Bank</div>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select id="tr_from" class="border rounded-lg px-3 py-2 text-sm">
+            <option value="cash">From Cash</option>
+            <option value="bank">From Bank</option>
+          </select>
+          <input id="tr_amount" type="number" placeholder="Amount ₹" class="border rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <button onclick="saveTransfer()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Transfer</button>
+      </div>
+      <div class="space-y-3">
+        <div class="font-bold text-gray-700">📒 Ledger History</div>
+        ${(ledger||[]).map(l => `
+          <div class="bg-white rounded-xl shadow p-3 flex justify-between items-center">
+            <div>
+              <div class="font-medium text-sm">${l.account_type === 'cash' ? '💵 Cash' : '🏦 Bank'} · ${l.entry_type === 'in' ? '➕' : '➖'} ₹${(l.amount||0).toLocaleString('en-IN')}</div>
+              <div class="text-xs text-gray-400">${l.note || ''} · ${new Date(l.created_at).toLocaleDateString('en-IN')}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm font-bold ${l.entry_type==='in'?'text-green-600':'text-red-500'}">${l.entry_type==='in'?'+':'-'}₹${(l.amount||0).toLocaleString('en-IN')}</div>
+              <div class="text-xs text-gray-400">Bal: ₹${(l.running_balance||0).toLocaleString('en-IN')}</div>
+              <button onclick="deleteCashBankEntry('${l.id}')" class="text-red-400 text-xs">X</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+    return;
+
+  } else if (tab === 'credit') {
+    const { data: credits } = await db.from('credit_summary').select('*');
+    content.innerHTML = `
+      <h2 class="text-xl font-bold mb-4">Credit Ledger</h2>
+      <div class="mb-4">
+        <button onclick="showAgingReport()" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold">📊 Aging Report</button>
+      </div>
+      <div id="aging_report_panel" class="mb-4"></div>
+      ${(credits || []).length === 0 ? '<div class="text-gray-400">No entries yet</div>' : ''}
+      <div class="space-y-3">
+        ${(credits || []).map(c => `
+          <div class="bg-white rounded-xl shadow p-4" id="credit_card_${c.customer_id}">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-lg">${c.name}</div>
+                <div class="text-sm text-gray-500">${c.phone}</div>
+                <div class="text-xs text-gray-400">${c.total_orders} order(s) · Last: ${new Date(c.last_order).toLocaleDateString('en-IN')}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-gray-400">Total Billed: ₹${c.total_owed}</div>
+                <div class="text-xs text-green-600">Total Paid: ₹${c.total_paid}</div>
+                <div class="font-bold text-lg ${c.balance > 0 ? 'text-red-500' : 'text-green-600'}">
+                  ${c.balance > 0 ? 'Outstanding: ₹' + c.balance : 'Settled ✅'}
+                </div>
+              </div>
+            </div>
+            <div class="flex gap-2 mt-3 flex-wrap">
+              <button onclick="toggleCreditDetail('${c.customer_id}')" class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 Party Statement</button>
+              <button onclick="recordPayment('${c.customer_id}','${c.name}',${c.balance})" class="bg-green-700 text-white text-xs px-3 py-1 rounded-lg">💰 Record Payment</button>
+              <button onclick="addManualEntry('${c.customer_id}','${c.name}')" class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">➕ Add Debit</button>
+            </div>
+            <div id="credit_detail_${c.customer_id}" class="hidden mt-4"></div>
+          </div>`).join('')}
+      </div>`;
+  }
+}
+
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
