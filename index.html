@@ -2672,8 +2672,8 @@ async function loadSalesReport() {
   const result = document.getElementById('sales_report_result');
   result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
 
-  const fromDT = from + 'T00:00:00';
-  const toDT = to + 'T23:59:59';
+  const fromDT = from + 'T00:00:00+05:30';
+  const toDT = to + 'T23:59:59+05:30';
 
   const { data: orders } = await db.from('orders').select('*, customers(name, phone)').gte('created_at', fromDT).lte('created_at', toDT);
   const orderIds = (orders || []).map(o => o.id);
