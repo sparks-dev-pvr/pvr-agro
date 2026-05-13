@@ -2659,6 +2659,7 @@ async function loadStockReport() {
         <div class="text-xs text-gray-400">(sell price × stock)</div>
       </div>
     </div>
+    ${zeroStock.length > 0 ? '<div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-4"><div class="font-bold text-red-600 mb-2">⚠️ Out of Stock (' + zeroStock.length + ' variants)</div><div class="space-y-1">' + zeroStock.map(z => '<div class="text-xs text-red-500 bg-white rounded px-2 py-1">' + z.name + ' · ' + z.size + ' · ' + z.label + '</div>').join('') + '</div></div>' : ''}
     <div class="bg-white rounded-xl shadow p-4">
       <div class="font-bold text-gray-700 mb-3">📦 Stock by Product (${rows.length} variants with stock)</div>
       ${rows.length === 0 ? '<div class="text-gray-400 text-center py-4">No stock found</div>' :
