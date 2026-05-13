@@ -1997,7 +1997,7 @@ async function showAgingReport() {
     if (days > 90) { bracket = '90+ days'; color = 'text-red-700 font-bold'; }
     else if (days > 60) { bracket = '61-90 days'; color = 'text-red-500'; }
     else if (days > 30) { bracket = '31-60 days'; color = 'text-orange-500'; }
-    return { name: c.name, phone: c.phone, balance: c.balance, days, bracket, color };
+    return { name: c.name, phone: c.phone, balance: c.balance, customerId: c.customer_id, days, bracket, color };
   }).sort((a, b) => b.days - a.days);
   if (aging.length === 0) {
     panel.innerHTML = '<div class="bg-white rounded-xl shadow p-4 text-green-600 font-bold text-center">No outstanding balances! ✅</div>';
