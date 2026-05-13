@@ -1990,7 +1990,8 @@ function editAgingDays(customerId, customerName) {
 async function showAgingReport() {
   const panel = document.getElementById('aging_report_panel');
   if (!panel) return;
-  if (panel.innerHTML !== '') { panel.innerHTML = ''; return; }
+  if (panel.innerHTML !== '' && !window._agingForceRefresh) { panel.innerHTML = ''; return; }
+  window._agingForceRefresh = false;
   panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
   const { data: credits } = await db.from('credit_summary').select('*');
   const { data: orders } = await db.from('orders').select('*').eq('payment_method', 'credit').eq('order_status', 'dispatched');
