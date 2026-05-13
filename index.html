@@ -611,7 +611,7 @@ async function showAdminTab(tab) {
         ${(purchases || []).map(p => {
           const items = (purchaseItems || []).filter(i => i.purchase_id === p.id);
           return `
-          <div class="bg-white rounded-xl shadow p-4 purchase-card" data-supplier="${(p.supplier_name||'').toLowerCase()}">
+          <div class="bg-white rounded-xl shadow p-4 purchase-card" data-supplier="${(p.supplier_name||'').toLowerCase()}" data-billno="${(p.bill_number||'').toLowerCase()}" data-products="${(purchaseItems||[]).filter(i=>i.purchase_id===p.id).map(i=>i.product_name||'').join(' ').toLowerCase()}">
             <div class="flex justify-between items-start">
               <div>
                 <div class="font-bold text-lg">${p.supplier_name || 'Unknown'}</div>
