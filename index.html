@@ -2675,7 +2675,7 @@ async function loadSalesReport() {
       ${productRows.length === 0 ? '<div class="text-gray-400 text-center py-3">No data</div>' :
       '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product · Size</th><th class="px-2 py-2 text-right">Qty Sold</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
       productRows.map(([key, d], i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 font-medium">${key}</td><td class="px-2 py-2 text-right">${d.qty}</td><td class="px-2 py-2 text-right font-bold text-green-700">${fmt(d.amount)}</td></tr>`).join('') +
-      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${productRows.reduce((s,[,d])=>s+d.qty,0)}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>'}
+      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td class="px-2 py-2">Total</td><td class="px-2 py-2 text-right">${productRows.reduce((s,[,d])=>s+d.qty,0)}</td><td class="px-2 py-2 text-right">${fmt(totalSales)}</td></tr></tfoot></table></div>`}
     </div>
 
     <div class="bg-white rounded-xl shadow p-4 mb-4">
