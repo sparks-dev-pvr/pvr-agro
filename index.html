@@ -2059,6 +2059,16 @@ async function recordSupplierPayment(supplierId, supplierName, balance) {
   showAdminTab('suppliers');
 }
 
+async function editSupplierEntry(entryId, supplierId, currentAmount, currentNote) {
+  const amount = prompt('Edit amount:\nCurrent: ₹' + currentAmount, currentAmount);
+  if (!amount || isNaN(amount)) return;
+  const note = prompt('Edit note:\nCurrent: ' + currentNote, currentNote);
+  if (note === null) return;
+  await db.from('supplier_ledger').update({ amount: parseFloat(amount), note }).eq('id', entryId);
+  alert('Entry updated! ✅');
+  await refreshSupplierDetail(supplierId);
+}
+
 async function deleteSupplierEntry(entryId, supplierId) {
   if (!confirm('Delete this entry?')) return;
   await db.from('supplier_ledger').delete().eq('id', entryId);
