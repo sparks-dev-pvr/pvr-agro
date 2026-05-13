@@ -737,6 +737,10 @@ async function showAdminTab(tab) {
     const { data: credits } = await db.from('credit_summary').select('*');
     content.innerHTML = `
       <h2 class="text-xl font-bold mb-4">Credit Ledger</h2>
+      <div class="mb-4">
+        <button onclick="showAgingReport()" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold">📊 Aging Report</button>
+      </div>
+      <div id="aging_report_panel" class="mb-4"></div>
       ${(credits || []).length === 0 ? '<div class="text-gray-400">No entries yet</div>' : ''}
       <div class="space-y-3">
         ${(credits || []).map(c => `
