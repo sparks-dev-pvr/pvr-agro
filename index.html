@@ -1694,6 +1694,7 @@ async function editPurchase(purchaseId) {
             <button onclick="deletePurchaseItem('${item.id}','${purchaseId}')" class="text-red-400 text-xs">🗑 Delete Item</button>
           </div>`).join('')}
       </div>
+      <button onclick="showAddItemToPurchase('${purchaseId}')" class="w-full bg-green-700 text-white py-2 rounded-xl font-bold mb-2">+ Add New Item</button>
       <button onclick="saveEditPurchase('${purchaseId}')" class="w-full bg-yellow-600 text-white py-2 rounded-xl font-bold">Save Changes</button>
     </div>`;
 }
