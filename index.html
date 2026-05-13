@@ -1795,20 +1795,31 @@ async function saveEditPurchase(purchaseId) {
   const items = (window._allPurchaseItems || []).filter(i => i.purchase_id === purchaseId);
   let subTotal = 0;
   for (const item of items) {
+    const oldQty = item.quantity || 0;
     const qty = parseFloat(document.getElementById('epi_qty_' + item.id)?.value) || 0;
     const price = parseFloat(document.getElementById('epi_price_' + item.id)?.value) || 0;
     const gst = parseFloat(document.getElementById('epi_gst_' + item.id)?.value) || 0;
     const total = qty * price * (1 + gst / 100);
     subTotal += total;
+    const newName = document.getElementById('epi_name_' + item.id)?.value;
+    const newSize = document.getElementById('epi_size_' + item.id)?.value;
     await db.from('purchase_items').update({
-      product_name: document.getElementById('epi_name_' + item.id)?.value,
+      product_name: newName,
       hsn_code: document.getElementById('epi_hsn_' + item.id)?.value,
       batch_number: document.getElementById('epi_batch_' + item.id)?.value,
       exp_date: document.getElementById('epi_exp_' + item.id)?.value,
       mfg_date: document.getElementById('epi_mfg_' + item.id)?.value,
-      size: document.getElementById('epi_size_' + item.id)?.value,
+      size: newSize,
       quantity: qty, unit_price: price, gst_percent: gst, total_price: total,
     }).eq('id', item.id);
+    const qtyDiff = qty - oldQty;
+    if (qtyDiff !== 0 && newSize) {
+      const { data: variants } = await db.from('product_variants').select('id, stock_quantity').ilike('bag_size', '%' + newSize + '%');
+      if (variants && variants.length > 0) {
+        const v = variants[0];
+        await db.from('product_variants').update({ stock_quantity: Math.max(0, (v.stock_quantity || 0) + qtyDiff) }).eq('id', v.id);
+      }
+    }
   }
   const transportCharges = parseFloat(document.getElementById('ep_transport_charges').value) || 0;
   const paidAmount = parseFloat(document.getElementById('ep_paid').value) || 0;
@@ -1826,7 +1837,11 @@ async function saveEditPurchase(purchaseId) {
     paid_amount: paidAmount,
     balance: balance,
   }).eq('id', purchaseId);
-  alert('Purchase updated! ✅');
+  const { data: currentLedger } = await db.from('supplier_ledger').select('*').eq('purchase_id', purchaseId).eq('type', 'debit').single();
+  if (currentLedger) {
+    await db.from('supplier_ledger').update({ amount: totalAmount, note: 'Purchase bill updated: ' + (document.getElementById('ep_bill_no').value || purchaseId.substring(0,8)) }).eq('id', currentLedger.id);
+  }
+  alert('Purchase updated! Stock and supplier ledger adjusted! ✅');
   showAdminTab('purchases');
 }
 
