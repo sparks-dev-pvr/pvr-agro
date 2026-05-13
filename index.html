@@ -1947,17 +1947,29 @@ async function editExpense(expenseId) {
 }
 
 async function saveEditExpense(expenseId) {
-  const amount = parseFloat(document.getElementById('ee_amount').value);
-  if (!amount) { alert('Amount required!'); return; }
+  const newAmount = parseFloat(document.getElementById('ee_amount').value);
+  if (!newAmount) { alert('Amount required!'); return; }
+  const oldExpense = (window._allExpenses || []).find(e => e.id === expenseId);
+  const oldAmount = oldExpense ? oldExpense.amount : 0;
+  const oldVia = oldExpense ? oldExpense.paid_via : 'cash';
+  const newVia = document.getElementById('ee_via').value;
   await db.from('expenses').update({
     category: document.getElementById('ee_category').value,
     description: document.getElementById('ee_desc').value.trim(),
-    amount,
-    paid_via: document.getElementById('ee_via').value,
+    amount: newAmount,
+    paid_via: newVia,
     expense_date: document.getElementById('ee_date').value,
     notes: document.getElementById('ee_notes').value.trim(),
   }).eq('id', expenseId);
-  alert('Expense updated! ✅');
+  if (oldAmount !== newAmount || oldVia !== newVia) {
+    const { data: oldLatest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', oldVia).order('created_at', { ascending: false }).limit(1);
+    const oldBal = oldLatest && oldLatest.length > 0 ? oldLatest[0].running_balance : 0;
+    await db.from('cash_bank_ledger').insert({ account_type: oldVia, entry_type: 'in', amount: oldAmount, running_balance: oldBal + oldAmount, reference_type: 'expense_edit_reversal', note: 'Reversal of old expense' });
+    const { data: newLatest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', newVia).order('created_at', { ascending: false }).limit(1);
+    const newBal = newLatest && newLatest.length > 0 ? newLatest[0].running_balance : 0;
+    await db.from('cash_bank_ledger').insert({ account_type: newVia, entry_type: 'out', amount: newAmount, running_balance: newBal - newAmount, reference_type: 'expense_edit', note: 'Updated expense: ' + document.getElementById('ee_category').value });
+  }
+  alert('Expense updated! Cash/Bank adjusted! ✅');
   showAdminTab('expenses');
 }
 
