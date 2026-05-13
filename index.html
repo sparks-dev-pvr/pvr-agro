@@ -659,10 +659,10 @@ async function showAdminTab(tab) {
           <div class="font-bold text-blue-500 text-sm">₹${totalBank.toLocaleString('en-IN')}</div>
         </div>
       </div>
-      <div class="flex gap-2 mb-4 flex-wrap">
-        <button onclick="showExpenseReport('monthly')" class="bg-purple-100 text-purple-700 text-xs px-3 py-1 rounded-lg">📊 Monthly Report</button>
-        <button onclick="showExpenseReport('category')" class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-lg">📂 Category Report</button>
-        <button onclick="showExpenseReport('cashflow')" class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-lg">💰 Cash Flow</button>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <button onclick="showExpenseReport('monthly')" class="bg-purple-100 text-purple-700 text-xs px-2 py-2 rounded-lg font-medium">📊 Monthly</button>
+        <button onclick="showExpenseReport('category')" class="bg-blue-100 text-blue-700 text-xs px-2 py-2 rounded-lg font-medium">📂 Category</button>
+        <button onclick="showExpenseReport('cashflow')" class="bg-green-100 text-green-700 text-xs px-2 py-2 rounded-lg font-medium">💰 Cash Flow</button>
       </div>
       <div id="expense_report_panel" class="mb-4"></div>
       <div id="add_expense_form"></div>
