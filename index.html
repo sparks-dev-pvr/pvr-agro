@@ -2051,7 +2051,7 @@ async function showAgingReport(forceRefresh) {
   panel.innerHTML = `
     <div class="bg-white rounded-xl shadow p-4">
       <div class="font-bold text-lg mb-3">📊 Credit Aging Report</div>
-      <div class="grid grid-cols-4 gap-3 mb-4">
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         <div class="bg-green-50 rounded-lg p-2 text-center">
           <div class="text-xs text-gray-500">0-30 days</div>
           <div class="font-bold text-green-600">${aging.filter(a=>a.bracket==='0-30 days').length} customers</div>
