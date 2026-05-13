@@ -645,18 +645,18 @@ async function showAdminTab(tab) {
         <h2 class="text-xl font-bold">Expenses</h2>
         <button onclick="showAddExpense()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Expense</button>
       </div>
-      <div class="grid grid-cols-3 gap-3 mb-4">
+      <div class="grid grid-cols-3 gap-2 mb-4">
         <div class="bg-white rounded-xl shadow p-3 text-center">
           <div class="text-xs text-gray-400">Total</div>
-          <div class="font-bold text-red-500">₹${total.toLocaleString('en-IN')}</div>
+          <div class="font-bold text-red-500 text-sm">₹${total.toLocaleString('en-IN')}</div>
         </div>
         <div class="bg-white rounded-xl shadow p-3 text-center">
-          <div class="text-xs text-gray-400">Cash</div>
-          <div class="font-bold text-orange-500">₹${totalCash.toLocaleString('en-IN')}</div>
+          <div class="text-xs text-gray-400">💵 Cash</div>
+          <div class="font-bold text-orange-500 text-sm">₹${totalCash.toLocaleString('en-IN')}</div>
         </div>
         <div class="bg-white rounded-xl shadow p-3 text-center">
-          <div class="text-xs text-gray-400">Bank</div>
-          <div class="font-bold text-blue-500">₹${totalBank.toLocaleString('en-IN')}</div>
+          <div class="text-xs text-gray-400">🏦 Bank</div>
+          <div class="font-bold text-blue-500 text-sm">₹${totalBank.toLocaleString('en-IN')}</div>
         </div>
       </div>
       <div class="flex gap-2 mb-4 flex-wrap">
