@@ -1236,6 +1236,7 @@ async function saveEditProduct(productId) {
         mrp_per_unit: parseFloat(document.getElementById('pk_mrp_' + pk.id)?.value) || null,
         price_per_unit: parseFloat(document.getElementById('pk_price_unit_' + pk.id)?.value) || null,
         price_per_box: parseFloat(price),
+        cost_price: parseFloat(document.getElementById('pk_cost_' + pk.id)?.value) || 0,
         stock_quantity: parseInt(document.getElementById('pk_stock_' + pk.id)?.value) || 0,
       }).eq('id', pk.id);
     }
