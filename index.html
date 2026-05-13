@@ -1552,7 +1552,10 @@ async function aiSaveItems(orderId, customerId) {
 function filterPurchases() {
   const search = document.getElementById('purchase_search')?.value.toLowerCase() || '';
   document.querySelectorAll('.purchase-card').forEach(card => {
-    card.style.display = card.dataset.supplier.includes(search) ? 'block' : 'none';
+    const supplier = card.dataset.supplier || '';
+    const products = card.dataset.products || '';
+    const billno = card.dataset.billno || '';
+    card.style.display = (supplier.includes(search) || products.includes(search) || billno.includes(search)) ? 'block' : 'none';
   });
 }
 
