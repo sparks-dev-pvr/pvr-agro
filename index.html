@@ -1679,11 +1679,21 @@ async function saveNewPurchase() {
 }
 
 async function deletePurchase(purchaseId) {
-  if (!confirm('Delete this purchase? Stock will NOT be auto-reversed. Delete only if entered by mistake.')) return;
+  if (!confirm('Delete this purchase? This will also reverse the stock and supplier ledger entries.')) return;
+  const { data: items } = await db.from('purchase_items').select('*').eq('purchase_id', purchaseId);
+  for (const item of (items || [])) {
+    if (item.size) {
+      const { data: variants } = await db.from('product_variants').select('id, stock_quantity').ilike('bag_size', '%' + item.size + '%');
+      if (variants && variants.length > 0) {
+        const v = variants[0];
+        await db.from('product_variants').update({ stock_quantity: Math.max(0, (v.stock_quantity || 0) - item.quantity) }).eq('id', v.id);
+      }
+    }
+  }
   await db.from('purchase_items').delete().eq('purchase_id', purchaseId);
   await db.from('supplier_ledger').delete().eq('purchase_id', purchaseId);
   await db.from('purchases').delete().eq('id', purchaseId);
-  alert('Purchase deleted!');
+  alert('Purchase deleted! Stock reversed. ✅');
   showAdminTab('purchases');
 }
 
