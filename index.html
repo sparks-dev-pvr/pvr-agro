@@ -2036,7 +2036,8 @@ async function showAgingReport() {
               <th class="px-3 py-2 text-left">Phone</th>
               <th class="px-3 py-2 text-right">Outstanding</th>
               <th class="px-3 py-2 text-center">Days</th>
-              <th class="px-3 py-2 text-center">Status</th>
+             <th class="px-3 py-2 text-center">Status</th>
+              <th class="px-3 py-2 text-center">Edit Days</th>
             </tr>
           </thead>
           <tbody>
@@ -2045,8 +2046,9 @@ async function showAgingReport() {
                 <td class="px-3 py-2 font-medium">${a.name}</td>
                 <td class="px-3 py-2 text-gray-500">${a.phone}</td>
                 <td class="px-3 py-2 text-right font-bold text-red-500">₹${a.balance.toLocaleString('en-IN')}</td>
-                <td class="px-3 py-2 text-center text-gray-600">${a.days}</td>
-                <td class="px-3 py-2 text-center ${a.color}">${a.bracket}</td>
+                <td class="px-3 py-2 text-center text-gray-600" id="aging_days_${a.customerId}">${a.days}</td>
+                <td class="px-3 py-2 text-center ${a.color}" id="aging_bracket_${a.customerId}">${a.bracket}</td>
+                <td class="px-3 py-2 text-center"><button onclick="editAgingDays('${a.customerId}','${a.name}')" class="text-blue-400 text-xs">✏️ Edit</button></td>
               </tr>`).join('')}
           </tbody>
         </table>
