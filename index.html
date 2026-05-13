@@ -2036,8 +2036,8 @@ async function showAgingReport(forceRefresh) {
       const d = new Date(o.created_at);
       return d < min ? d : min;
     }, today);
-    const savedDays = localStorage.getItem('aging_days_' + c.customer_id);
-    const days = savedDays ? parseInt(savedDays) : Math.floor((today - oldest) / (1000 * 60 * 60 * 24));
+    const overrideEntry = (agingOverrides || []).find(o => o.customer_id === c.customer_id);
+    const days = overrideEntry ? overrideEntry.days_override : Math.floor((today - oldest) / (1000 * 60 * 60 * 24));
     let bracket = '0-30 days';
     let color = 'text-green-600';
     if (days > 90) { bracket = '90+ days'; color = 'text-red-700 font-bold'; }
