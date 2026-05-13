@@ -1251,6 +1251,7 @@ async function saveEditProduct(productId) {
         mrp_per_unit: parseFloat(row.querySelector('.pkg_mrp')?.value) || null,
         price_per_unit: parseFloat(row.querySelector('.pkg_price_unit')?.value) || null,
         price_per_box: parseFloat(price),
+        cost_price: parseFloat(row.querySelector('.pkg_cost')?.value) || 0,
         stock_quantity: parseInt(row.querySelector('.pkg_stock')?.value) || 0,
       });
     }
