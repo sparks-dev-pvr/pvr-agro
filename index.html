@@ -1726,10 +1726,9 @@ async function saveNewPurchase() {
   if (error) { alert('Error: ' + error.message); return; }
   await db.from('purchase_items').insert(items.map(i => ({ ...i, purchase_id: purchase.id })));
   for (const item of items) {
-    const { data: variants } = await db.from('product_variants').select('id, product_id, bag_size, stock_quantity').ilike('bag_size', '%' + item.size + '%');
-    if (variants && variants.length > 0) {
-      const v = variants[0];
-      await db.from('product_variants').update({ stock_quantity: (v.stock_quantity || 0) + item.quantity }).eq('id', v.id);
+    if (item.pkg_id) {
+      const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', item.pkg_id).single();
+      if (pkg) await db.from('product_packagings').update({ stock_quantity: (pkg.stock_quantity || 0) + item.quantity }).eq('id', item.pkg_id);
     }
   }
   await db.from('supplier_ledger').insert({ supplier_id: supplierId, purchase_id: purchase.id, amount: totalAmount, type: 'debit', note: 'Purchase bill: ' + (document.getElementById('np_bill_no').value.trim() || purchase.id.substring(0,8)) });
