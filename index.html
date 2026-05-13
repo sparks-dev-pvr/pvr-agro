@@ -992,8 +992,13 @@ async function recordPayment(customerId, customerName, balance) {
   const amount = prompt('Record payment for ' + customerName + '\nCurrent balance: ₹' + balance + '\n\nEnter amount paid:');
   if (!amount || isNaN(amount)) return;
   const note = prompt('Add a note (optional):') || 'Payment received';
+  const via = prompt('Received via (type cash or bank):') || 'cash';
+  const paidVia = via.toLowerCase().includes('bank') ? 'bank' : 'cash';
   await db.from('credit_ledger').insert({ customer_id: customerId, amount: parseFloat(amount), type: 'credit', note });
-  alert('Payment of ₹' + amount + ' recorded! ✅');
+  const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
+  const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
+  await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'in', amount: parseFloat(amount), running_balance: currentBal + parseFloat(amount), reference_type: 'customer_payment', note: 'Payment from ' + customerName });
+  alert('Payment of ₹' + amount + ' recorded and added to ' + paidVia + '! ✅');
   await refreshCreditSummaryCard(customerId);
   await refreshCreditDetail(customerId);
 }
