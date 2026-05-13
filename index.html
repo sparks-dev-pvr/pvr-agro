@@ -1705,6 +1705,63 @@ async function deletePurchaseItem(itemId, purchaseId) {
   if (el) el.remove();
 }
 
+function showAddItemToPurchase(purchaseId) {
+  const existing = document.getElementById('add_item_to_purchase_' + purchaseId);
+  if (existing) { existing.remove(); return; }
+  const panel = document.createElement('div');
+  panel.id = 'add_item_to_purchase_' + purchaseId;
+  panel.className = 'border rounded-lg p-3 bg-green-50 mt-3';
+  panel.innerHTML = `
+    <div class="font-semibold text-green-700 text-sm mb-2">+ Add New Item</div>
+    <div class="grid grid-cols-2 gap-2">
+      <input id="nadd_product_${purchaseId}" placeholder="Product Name *" class="border rounded px-2 py-1 text-xs col-span-2" />
+      <input id="nadd_hsn_${purchaseId}" placeholder="HSN Code" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_batch_${purchaseId}" placeholder="Batch No" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_exp_${purchaseId}" placeholder="Exp Date" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_mfg_${purchaseId}" placeholder="Mfg Date" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_size_${purchaseId}" placeholder="Size" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_qty_${purchaseId}" type="number" placeholder="Quantity *" class="border rounded px-2 py-1 text-xs" />
+      <select id="nadd_unit_${purchaseId}" class="border rounded px-2 py-1 text-xs">
+        <option>Pcs</option><option>Box</option><option>Kg</option><option>L</option><option>ml</option>
+      </select>
+      <input id="nadd_price_${purchaseId}" type="number" placeholder="Price/Unit ₹ *" class="border rounded px-2 py-1 text-xs" />
+      <input id="nadd_gst_${purchaseId}" type="number" placeholder="GST %" class="border rounded px-2 py-1 text-xs" value="18" />
+    </div>
+    <button onclick="saveAddItemToPurchase('${purchaseId}')" class="mt-2 w-full bg-green-700 text-white py-1 rounded-lg text-xs font-bold">Save Item</button>`;
+  const form = document.getElementById('add_purchase_form');
+  if (form) form.appendChild(panel);
+}
+
+async function saveAddItemToPurchase(purchaseId) {
+  const product = document.getElementById('nadd_product_' + purchaseId)?.value.trim();
+  const qty = parseFloat(document.getElementById('nadd_qty_' + purchaseId)?.value) || 0;
+  const price = parseFloat(document.getElementById('nadd_price_' + purchaseId)?.value) || 0;
+  if (!product || !qty || !price) { alert('Product name, quantity and price are required!'); return; }
+  const gst = parseFloat(document.getElementById('nadd_gst_' + purchaseId)?.value) || 0;
+  const total = qty * price * (1 + gst / 100);
+  await db.from('purchase_items').insert({
+    purchase_id: purchaseId,
+    product_name: product,
+    hsn_code: document.getElementById('nadd_hsn_' + purchaseId)?.value.trim(),
+    batch_number: document.getElementById('nadd_batch_' + purchaseId)?.value.trim(),
+    exp_date: document.getElementById('nadd_exp_' + purchaseId)?.value.trim(),
+    mfg_date: document.getElementById('nadd_mfg_' + purchaseId)?.value.trim(),
+    size: document.getElementById('nadd_size_' + purchaseId)?.value.trim(),
+    quantity: qty,
+    unit: document.getElementById('nadd_unit_' + purchaseId)?.value,
+    unit_price: price,
+    gst_percent: gst,
+    total_price: total,
+  });
+  const { data: currentPurchase } = await db.from('purchases').select('sub_total, transport_charges, paid_amount').eq('id', purchaseId).single();
+  const newSubTotal = (currentPurchase?.sub_total || 0) + total;
+  const newTotal = newSubTotal + (currentPurchase?.transport_charges || 0);
+  const newBalance = newTotal - (currentPurchase?.paid_amount || 0);
+  await db.from('purchases').update({ sub_total: newSubTotal, total_amount: newTotal, balance: newBalance }).eq('id', purchaseId);
+  alert('Item added! ✅');
+  showAdminTab('purchases');
+}
+
 async function saveEditPurchase(purchaseId) {
   const items = (window._allPurchaseItems || []).filter(i => i.purchase_id === purchaseId);
   let subTotal = 0;
