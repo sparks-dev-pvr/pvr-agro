@@ -3350,7 +3350,14 @@ async function loadPLReport() {
     db.from('orders').select('*, customers(name)').gte('created_at', fromDT).lte('created_at', toDT),
     db.from('purchases').select('total_amount, supplier_name, bill_date, bill_number').gte('created_at', fromDT).lte('created_at', toDT),
     db.from('expenses').select('amount, category, description, expense_date').gte('expense_date', from).lte('expense_date', to),
+    db.from('products').select('*, product_variants(*, product_packagings(*))'),
   ]);
+  const orderIds = (orders || []).map(o => o.id);
+  let plOrderItems = [];
+  if (orderIds.length > 0) {
+    const { data: oi } = await db.from('order_items').select('*').in('order_id', orderIds);
+    plOrderItems = oi || [];
+  }
 
   const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
   const totalCOGS = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
