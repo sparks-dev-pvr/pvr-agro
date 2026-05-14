@@ -3190,6 +3190,331 @@ async function showAdminTab(tab) {
   }
 }
 
+function setPLRange(which) {
+  const now = new Date();
+  let from, to;
+  if (which === 'this') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  }
+  const fromEl = document.getElementById('pl_from');
+  const toEl = document.getElementById('pl_to');
+  if (fromEl) fromEl.value = getISTDateString(from);
+  if (toEl) toEl.value = getISTDateString(to);
+}
+
+function setGSTR1Range(which) {
+  const now = new Date();
+  let from, to;
+  if (which === 'this') {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  }
+  const fromEl = document.getElementById('gstr1_from');
+  const toEl = document.getElementById('gstr1_to');
+  if (fromEl) fromEl.value = getISTDateString(from);
+  if (toEl) toEl.value = getISTDateString(to);
+}
+
+async function loadPLReport() {
+  const from = document.getElementById('pl_from').value;
+  const to = document.getElementById('pl_to').value;
+  if (!from || !to) { alert('Please select both From and To dates!'); return; }
+  const result = document.getElementById('pl_report_result');
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const fromDT = from + 'T00:00:00+05:30';
+  const toDT = to + 'T23:59:59+05:30';
+
+  const [{ data: orders }, { data: purchases }, { data: expenses }] = await Promise.all([
+    db.from('orders').select('total_amount').gte('created_at', fromDT).lte('created_at', toDT),
+    db.from('purchases').select('total_amount, supplier_name, bill_date, bill_number').gte('created_at', fromDT).lte('created_at', toDT),
+    db.from('expenses').select('amount, category, description, expense_date').gte('expense_date', from).lte('expense_date', to),
+  ]);
+
+  const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalCOGS = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
+  const totalExpenses = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+  const grossProfit = totalSales - totalCOGS;
+  const netProfit = grossProfit - totalExpenses;
+  const grossMargin = totalSales > 0 ? ((grossProfit / totalSales) * 100).toFixed(1) : 0;
+  const netMargin = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : 0;
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const profitColor = n => n >= 0 ? 'text-green-700' : 'text-red-600';
+
+  result.innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">💰 Profit & Loss (${from} to ${to})</div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between py-2 border-b">
+            <span class="text-gray-600">Total Sales Revenue</span>
+            <span class="font-bold text-green-700">${fmt(totalSales)}</span>
+          </div>
+          <div class="flex justify-between py-2 border-b">
+            <span class="text-gray-600">Cost of Goods Sold (Purchases)</span>
+            <span class="font-bold text-red-500">- ${fmt(totalCOGS)}</span>
+          </div>
+          <div class="flex justify-between py-2 border-b bg-green-50 px-2 rounded-lg">
+            <span class="font-bold text-gray-700">Gross Profit</span>
+            <div class="text-right">
+              <span class="font-bold text-lg ${profitColor(grossProfit)}">${fmt(grossProfit)}</span>
+              <div class="text-xs text-gray-400">Margin: ${grossMargin}%</div>
+            </div>
+          </div>
+          <div class="flex justify-between py-2 border-b">
+            <span class="text-gray-600">Total Expenses</span>
+            <span class="font-bold text-orange-500">- ${fmt(totalExpenses)}</span>
+          </div>
+          <div class="flex justify-between py-3 bg-gray-800 text-white px-3 rounded-xl mt-2">
+            <span class="font-bold text-base">Net Profit</span>
+            <div class="text-right">
+              <span class="font-bold text-lg ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${fmt(netProfit)}</span>
+              <div class="text-xs text-gray-400">Margin: ${netMargin}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">🛒 Purchases Breakdown (${(purchases||[]).length} bills)</div>
+        ${(purchases||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No purchases in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-red-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Supplier</th><th class="px-2 py-2 text-left">Bill No</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+        (purchases||[]).map((p,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${p.bill_date||'-'}</td><td class="px-2 py-2">${p.supplier_name||'-'}</td><td class="px-2 py-2 text-gray-400">${p.bill_number||'-'}</td><td class="px-2 py-2 text-right font-bold text-red-600">${fmt(p.total_amount)}</td></tr>`).join('') +
+        `<tr class="bg-gray-800 text-white font-bold"><td colspan="3" class="px-2 py-2">Total COGS</td><td class="px-2 py-2 text-right">${fmt(totalCOGS)}</td></tr></tbody></table></div>`}
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">💸 Expenses Breakdown (${(expenses||[]).length} entries)</div>
+        ${(expenses||[]).length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No expenses in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-orange-600 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Category</th><th class="px-2 py-2 text-left">Description</th><th class="px-2 py-2 text-right">Amount</th></tr></thead><tbody>' +
+        (expenses||[]).map((e,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b"><td class="px-2 py-2 text-gray-500">${e.expense_date||'-'}</td><td class="px-2 py-2">${e.category||'-'}</td><td class="px-2 py-2 text-gray-400">${e.description||'-'}</td><td class="px-2 py-2 text-right font-bold text-orange-600">${fmt(e.amount)}</td></tr>`).join('') +
+        `<tr class="bg-gray-800 text-white font-bold"><td colspan="3" class="px-2 py-2">Total Expenses</td><td class="px-2 py-2 text-right">${fmt(totalExpenses)}</td></tr></tbody></table></div>`}
+      </div>
+    </div>`;
+}
+
+async function loadGSTR1Report() {
+  const from = document.getElementById('gstr1_from').value;
+  const to = document.getElementById('gstr1_to').value;
+  const gstPct = parseFloat(document.getElementById('gstr1_gst_pct').value) || 18;
+  if (!from || !to) { alert('Please select both From and To dates!'); return; }
+  const result = document.getElementById('gstr1_result');
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const fromDT = from + 'T00:00:00+05:30';
+  const toDT = to + 'T23:59:59+05:30';
+
+  const { data: orders } = await db.from('orders').select('*, customers(name, phone, gst_number, address)').gte('created_at', fromDT).lte('created_at', toDT).order('created_at');
+
+  const gstRate = gstPct / 100;
+  const taxableRate = 1 / (1 + gstRate);
+
+  const b2b = (orders || []).filter(o => o.customers?.gst_number);
+  const b2c = (orders || []).filter(o => !o.customers?.gst_number);
+
+  const calcTax = (amount, isIGST) => {
+    const taxable = amount * taxableRate;
+    const totalGST = amount - taxable;
+    return isIGST
+      ? { taxable, igst: totalGST, cgst: 0, sgst: 0 }
+      : { taxable, igst: 0, cgst: totalGST / 2, sgst: totalGST / 2 };
+  };
+
+  const isIGST = o => {
+    const addr = (o.customers?.address || o.shipping_address || '').toLowerCase();
+    return addr.includes('igst') || (o.gst_number && o.gst_number.substring(0, 2) !== '36');
+  };
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  const fmtN = n => (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+  let b2bTaxable = 0, b2bIGST = 0, b2bCGST = 0, b2bSGST = 0;
+  let b2cTaxable = 0, b2cIGST = 0, b2cCGST = 0, b2cSGST = 0;
+
+  const b2bRows = b2b.map((o, i) => {
+    const interstate = isIGST(o);
+    const t = calcTax(o.total_amount || 0, interstate);
+    b2bTaxable += t.taxable; b2bIGST += t.igst; b2bCGST += t.cgst; b2bSGST += t.sgst;
+    return `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b text-xs">
+      <td class="px-2 py-2">${new Date(o.created_at).toLocaleDateString('en-IN')}</td>
+      <td class="px-2 py-2 font-medium">${o.customers?.name||'-'}</td>
+      <td class="px-2 py-2 text-blue-600 font-mono">${o.customers?.gst_number||'-'}</td>
+      <td class="px-2 py-2 text-right">${fmt(t.taxable)}</td>
+      <td class="px-2 py-2 text-right text-purple-600">${t.igst > 0 ? fmt(t.igst) : '—'}</td>
+      <td class="px-2 py-2 text-right text-blue-600">${t.cgst > 0 ? fmt(t.cgst) : '—'}</td>
+      <td class="px-2 py-2 text-right text-green-600">${t.sgst > 0 ? fmt(t.sgst) : '—'}</td>
+      <td class="px-2 py-2 text-right font-bold text-gray-700">${fmt(o.total_amount)}</td>
+    </tr>`;
+  });
+
+  const b2cRows = b2c.map((o, i) => {
+    const t = calcTax(o.total_amount || 0, false);
+    b2cTaxable += t.taxable; b2cCGST += t.cgst; b2cSGST += t.sgst;
+    return `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b text-xs">
+      <td class="px-2 py-2">${new Date(o.created_at).toLocaleDateString('en-IN')}</td>
+      <td class="px-2 py-2 font-medium">${o.customers?.name||'-'}</td>
+      <td class="px-2 py-2 text-gray-400">${o.customers?.phone||'-'}</td>
+      <td class="px-2 py-2 text-right">${fmt(t.taxable)}</td>
+      <td class="px-2 py-2 text-right text-blue-600">${fmt(t.cgst)}</td>
+      <td class="px-2 py-2 text-right text-green-600">${fmt(t.sgst)}</td>
+      <td class="px-2 py-2 text-right font-bold text-gray-700">${fmt(o.total_amount)}</td>
+    </tr>`;
+  });
+
+  const grandTaxable = b2bTaxable + b2cTaxable;
+  const grandIGST = b2bIGST + b2cIGST;
+  const grandCGST = b2bCGST + b2cCGST;
+  const grandSGST = b2bSGST + b2cSGST;
+  const grandTotal = (orders||[]).reduce((s,o) => s + (o.total_amount||0), 0);
+
+  result.innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">🧾 GSTR-1 Summary (${from} to ${to}) · GST @${gstPct}%</div>
+        <div class="grid grid-cols-2 gap-3 mb-2 sm:grid-cols-4">
+          <div class="bg-gray-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-400">Taxable Value</div>
+            <div class="font-bold text-gray-700">${fmt(grandTaxable)}</div>
+          </div>
+          <div class="bg-purple-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-400">IGST</div>
+            <div class="font-bold text-purple-600">${fmt(grandIGST)}</div>
+          </div>
+          <div class="bg-blue-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-400">CGST</div>
+            <div class="font-bold text-blue-600">${fmt(grandCGST)}</div>
+          </div>
+          <div class="bg-green-50 rounded-lg p-3 text-center">
+            <div class="text-xs text-gray-400">SGST</div>
+            <div class="font-bold text-green-600">${fmt(grandSGST)}</div>
+          </div>
+        </div>
+        <div class="text-right text-sm font-bold text-gray-700 mt-1">Total Invoice Value: ${fmt(grandTotal)}</div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-blue-700 mb-2">B2B Sales — ${b2b.length} invoices (customers with GST)</div>
+        ${b2b.length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No B2B sales in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-blue-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-left">GSTIN</th><th class="px-2 py-2 text-right">Taxable</th><th class="px-2 py-2 text-right">IGST</th><th class="px-2 py-2 text-right">CGST</th><th class="px-2 py-2 text-right">SGST</th><th class="px-2 py-2 text-right">Total</th></tr></thead><tbody>' +
+        b2bRows.join('') +
+        `<tr class="bg-gray-800 text-white font-bold text-xs"><td colspan="3" class="px-2 py-2">B2B Total</td><td class="px-2 py-2 text-right">${fmt(b2bTaxable)}</td><td class="px-2 py-2 text-right">${fmt(b2bIGST)}</td><td class="px-2 py-2 text-right">${fmt(b2bCGST)}</td><td class="px-2 py-2 text-right">${fmt(b2bSGST)}</td><td class="px-2 py-2 text-right">${fmt(b2b.reduce((s,o)=>s+(o.total_amount||0),0))}</td></tr>` +
+        '</tbody></table></div>'}
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-green-700 mb-2">B2C Sales — ${b2c.length} invoices (customers without GST)</div>
+        ${b2c.length === 0 ? '<div class="text-gray-400 text-sm text-center py-3">No B2C sales in this period</div>' :
+        '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Date</th><th class="px-2 py-2 text-left">Customer</th><th class="px-2 py-2 text-left">Phone</th><th class="px-2 py-2 text-right">Taxable</th><th class="px-2 py-2 text-right">CGST</th><th class="px-2 py-2 text-right">SGST</th><th class="px-2 py-2 text-right">Total</th></tr></thead><tbody>' +
+        b2cRows.join('') +
+        `<tr class="bg-gray-800 text-white font-bold text-xs"><td colspan="3" class="px-2 py-2">B2C Total</td><td class="px-2 py-2 text-right">${fmt(b2cTaxable)}</td><td class="px-2 py-2 text-right">${fmt(b2cCGST)}</td><td class="px-2 py-2 text-right">${fmt(b2cSGST)}</td><td class="px-2 py-2 text-right">${fmt(b2c.reduce((s,o)=>s+(o.total_amount||0),0))}</td></tr>` +
+        '</tbody></table></div>'}
+      </div>
+    </div>`;
+}
+
+async function loadGSTR3BReport() {
+  const month = document.getElementById('gstr3b_month').value;
+  const gstPct = parseFloat(document.getElementById('gstr3b_gst_pct').value) || 18;
+  if (!month) { alert('Please select a month!'); return; }
+  const result = document.getElementById('gstr3b_result');
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const fromDT = month + '-01T00:00:00+05:30';
+  const lastDay = new Date(parseInt(month.split('-')[0]), parseInt(month.split('-')[1]), 0).getDate();
+  const toDT = month + '-' + String(lastDay).padStart(2,'0') + 'T23:59:59+05:30';
+  const fromDate = month + '-01';
+  const toDate = month + '-' + String(lastDay).padStart(2,'0');
+
+  const [{ data: orders }, { data: purchaseItems }] = await Promise.all([
+    db.from('orders').select('total_amount, gst_number, customers(gst_number)').gte('created_at', fromDT).lte('created_at', toDT),
+    db.from('purchase_items').select('quantity, unit_price, gst_percent, total_price, purchase_id'),
+  ]);
+
+  const allPurchases = await db.from('purchases').select('id, created_at').gte('created_at', fromDT).lte('created_at', toDT);
+  const purchaseIdsInMonth = new Set((allPurchases.data || []).map(p => p.id));
+  const monthPurchaseItems = (purchaseItems || []).filter(i => purchaseIdsInMonth.has(i.purchase_id));
+
+  const gstRate = gstPct / 100;
+  const taxableRate = 1 / (1 + gstRate);
+
+  let outIGST = 0, outCGST = 0, outSGST = 0, outTaxable = 0;
+  (orders || []).forEach(o => {
+    const amount = o.total_amount || 0;
+    const taxable = amount * taxableRate;
+    const totalGST = amount - taxable;
+    const hasGSTIN = o.customers?.gst_number || o.gst_number;
+    outTaxable += taxable;
+    if (hasGSTIN) { outIGST += totalGST; }
+    else { outCGST += totalGST / 2; outSGST += totalGST / 2; }
+  });
+
+  let itcIGST = 0, itcCGST = 0, itcSGST = 0, itcTaxable = 0;
+  monthPurchaseItems.forEach(item => {
+    const baseAmount = (item.quantity || 0) * (item.unit_price || 0);
+    const gst = item.gst_percent || 0;
+    const gstAmt = baseAmount * (gst / 100);
+    itcTaxable += baseAmount;
+    if (gst > 0) { itcCGST += gstAmt / 2; itcSGST += gstAmt / 2; }
+  });
+
+  const netIGST = Math.max(0, outIGST - itcIGST);
+  const netCGST = Math.max(0, outCGST - itcCGST);
+  const netSGST = Math.max(0, outSGST - itcSGST);
+  const totalPayable = netIGST + netCGST + netSGST;
+  const totalITC = itcIGST + itcCGST + itcSGST;
+  const totalOutputTax = outIGST + outCGST + outSGST;
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+
+  result.innerHTML = `
+    <div class="space-y-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">📋 GSTR-3B — ${month} · GST @${gstPct}%</div>
+
+        <div class="font-semibold text-sm text-green-700 mb-2">3.1 — Output Tax Liability (Sales)</div>
+        <table class="w-full text-xs mb-4">
+          <thead><tr class="bg-green-700 text-white"><th class="px-3 py-2 text-left">Description</th><th class="px-3 py-2 text-right">Taxable Value</th><th class="px-3 py-2 text-right">IGST</th><th class="px-3 py-2 text-right">CGST</th><th class="px-3 py-2 text-right">SGST</th></tr></thead>
+          <tbody>
+            <tr class="border-b bg-white"><td class="px-3 py-2">Outward Taxable Supplies</td><td class="px-3 py-2 text-right">${fmt(outTaxable)}</td><td class="px-3 py-2 text-right text-purple-600">${fmt(outIGST)}</td><td class="px-3 py-2 text-right text-blue-600">${fmt(outCGST)}</td><td class="px-3 py-2 text-right text-green-600">${fmt(outSGST)}</td></tr>
+            <tr class="bg-gray-800 text-white font-bold"><td class="px-3 py-2">Total Output Tax</td><td class="px-3 py-2 text-right">${fmt(outTaxable)}</td><td class="px-3 py-2 text-right">${fmt(outIGST)}</td><td class="px-3 py-2 text-right">${fmt(outCGST)}</td><td class="px-3 py-2 text-right">${fmt(outSGST)}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="font-semibold text-sm text-blue-700 mb-2">4 — Input Tax Credit (Purchases)</div>
+        <table class="w-full text-xs mb-4">
+          <thead><tr class="bg-blue-700 text-white"><th class="px-3 py-2 text-left">Description</th><th class="px-3 py-2 text-right">Taxable Value</th><th class="px-3 py-2 text-right">IGST</th><th class="px-3 py-2 text-right">CGST</th><th class="px-3 py-2 text-right">SGST</th></tr></thead>
+          <tbody>
+            <tr class="border-b bg-white"><td class="px-3 py-2">ITC Available (Inputs)</td><td class="px-3 py-2 text-right">${fmt(itcTaxable)}</td><td class="px-3 py-2 text-right text-purple-600">${fmt(itcIGST)}</td><td class="px-3 py-2 text-right text-blue-600">${fmt(itcCGST)}</td><td class="px-3 py-2 text-right text-green-600">${fmt(itcSGST)}</td></tr>
+            <tr class="bg-gray-800 text-white font-bold"><td class="px-3 py-2">Total ITC</td><td class="px-3 py-2 text-right">${fmt(itcTaxable)}</td><td class="px-3 py-2 text-right">${fmt(itcIGST)}</td><td class="px-3 py-2 text-right">${fmt(itcCGST)}</td><td class="px-3 py-2 text-right">${fmt(itcSGST)}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="font-semibold text-sm text-red-700 mb-2">Net Tax Payable</div>
+        <table class="w-full text-xs mb-2">
+          <thead><tr class="bg-red-700 text-white"><th class="px-3 py-2 text-left">Head</th><th class="px-3 py-2 text-right">Output Tax</th><th class="px-3 py-2 text-right">ITC</th><th class="px-3 py-2 text-right">Net Payable</th></tr></thead>
+          <tbody>
+            <tr class="border-b bg-white"><td class="px-3 py-2">IGST</td><td class="px-3 py-2 text-right">${fmt(outIGST)}</td><td class="px-3 py-2 text-right text-green-600">- ${fmt(itcIGST)}</td><td class="px-3 py-2 text-right font-bold text-red-600">${fmt(netIGST)}</td></tr>
+            <tr class="border-b bg-gray-50"><td class="px-3 py-2">CGST</td><td class="px-3 py-2 text-right">${fmt(outCGST)}</td><td class="px-3 py-2 text-right text-green-600">- ${fmt(itcCGST)}</td><td class="px-3 py-2 text-right font-bold text-red-600">${fmt(netCGST)}</td></tr>
+            <tr class="border-b bg-white"><td class="px-3 py-2">SGST</td><td class="px-3 py-2 text-right">${fmt(outSGST)}</td><td class="px-3 py-2 text-right text-green-600">- ${fmt(itcSGST)}</td><td class="px-3 py-2 text-right font-bold text-red-600">${fmt(netSGST)}</td></tr>
+            <tr class="bg-gray-800 text-white font-bold"><td class="px-3 py-2">Total</td><td class="px-3 py-2 text-right">${fmt(totalOutputTax)}</td><td class="px-3 py-2 text-right">- ${fmt(totalITC)}</td><td class="px-3 py-2 text-right text-yellow-300 text-base">${fmt(totalPayable)}</td></tr>
+          </tbody>
+        </table>
+        <div class="text-center mt-3 bg-red-50 border border-red-200 rounded-xl p-3">
+          <div class="text-xs text-gray-500">Total GST Payable for ${month}</div>
+          <div class="font-bold text-2xl text-red-600">${fmt(totalPayable)}</div>
+        </div>
+      </div>
+    </div>`;
+}
+  
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
