@@ -1730,7 +1730,22 @@ async function saveNewPurchase() {
     balance: balance,
   }).select().single();
   if (error) { alert('Error: ' + error.message); return; }
-  await db.from('purchase_items').insert(items.map(i => ({ ...i, purchase_id: purchase.id })));
+  await db.from('purchase_items').insert(items.map(i => ({
+    purchase_id: purchase.id,
+    product_id: i.product_id,
+    variant_id: i.variant_id,
+    product_name: i.product_name,
+    hsn_code: i.hsn_code,
+    batch_number: i.batch_number,
+    exp_date: i.exp_date,
+    mfg_date: i.mfg_date,
+    size: i.size,
+    quantity: i.quantity,
+    unit: i.unit,
+    unit_price: i.unit_price,
+    gst_percent: i.gst_percent,
+    total_price: i.total_price,
+  })));
   for (const item of items) {
     if (item.pkg_id) {
       const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', item.pkg_id).single();
