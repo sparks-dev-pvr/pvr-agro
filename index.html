@@ -2653,7 +2653,7 @@ async function loadStockReport() {
     <div class="bg-white rounded-xl shadow p-4">
       <div class="font-bold text-gray-700 mb-3">📦 Stock by Product (${rows.length} variants with stock)</div>
       ${rows.length === 0 ? '<div class="text-gray-400 text-center py-4">No stock found</div>' :
-      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product</th><th class="px-2 py-2 text-left">Size · Pack</th><th class="px-2 py-2 text-right">Stock</th><th class="px-2 py-2 text-right">Avg Cost/box</th><th class="px-2 py-2 text-right">Sale/box</th><th class="px-2 py-2 text-right">Purchase Value</th><th class="px-2 py-2 text-right">Sale Value</th></tr></thead><tbody>' +
+      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product</th><th class="px-2 py-2 text-left">Size · Pack</th><th class="px-2 py-2 text-right">Stock</th><th class="px-2 py-2 text-right">Cost/box</th><th class="px-2 py-2 text-right">Sale/box</th><th class="px-2 py-2 text-right">Purchase Value</th><th class="px-2 py-2 text-right">Sale Value</th></tr></thead><tbody>' +
       rows.map((r,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b">
         <td class="px-2 py-2 font-medium">${r.name}</td>
         <td class="px-2 py-2 text-gray-500">${r.size} · ${r.label}</td>
