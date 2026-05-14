@@ -3535,6 +3535,334 @@ async function loadGSTR3BReport() {
     </div>`;
 }
   
+async function loadBalanceSheet() {
+  const result = document.getElementById('bs_result');
+  if (!result) return;
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const [
+    { data: cbLedger },
+    { data: products },
+    { data: creditSummary },
+    { data: supplierLedger },
+    { data: fixedAssets },
+    { data: loans },
+    { data: purchases },
+    { data: purchaseItems },
+  ] = await Promise.all([
+    db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false }),
+    db.from('products').select('*, product_variants(*, product_packagings(*))'),
+    db.from('credit_summary').select('*'),
+    db.from('supplier_ledger').select('*'),
+    db.from('fixed_assets').select('*').order('created_at'),
+    db.from('loans').select('*').order('created_at'),
+    db.from('purchases').select('id'),
+    db.from('purchase_items').select('*'),
+  ]);
+
+  // Cash & Bank
+  const cashLedger = (cbLedger || []).filter(l => l.account_type === 'cash');
+  const bankLedger = (cbLedger || []).filter(l => l.account_type === 'bank');
+  const cashBalance = cashLedger.length > 0 ? cashLedger[0].running_balance : 0;
+  const bankBalance = bankLedger.length > 0 ? bankLedger[0].running_balance : 0;
+
+  // Stock Value (sale price × stock)
+  let stockValue = 0;
+  (products || []).forEach(p => {
+    (p.product_variants || []).forEach(v => {
+      (v.product_packagings || []).forEach(pk => {
+        stockValue += (pk.price_per_box || 0) * (pk.stock_quantity || 0);
+      });
+    });
+  });
+
+  // Receivables (customer outstanding)
+  const totalReceivables = (creditSummary || []).reduce((s, c) => s + (c.balance > 0 ? c.balance : 0), 0);
+
+  // Fixed Assets total
+  const totalFixedAssets = (fixedAssets || []).reduce((s, a) => s + (a.value || 0), 0);
+
+  // Total Assets
+  const totalAssets = cashBalance + bankBalance + stockValue + totalReceivables + totalFixedAssets;
+
+  // Supplier Payables
+  const supplierMap = {};
+  (supplierLedger || []).forEach(l => {
+    if (!supplierMap[l.supplier_id]) supplierMap[l.supplier_id] = 0;
+    supplierMap[l.supplier_id] += l.type === 'debit' ? l.amount : -l.amount;
+  });
+  const totalSupplierPayables = Object.values(supplierMap).reduce((s, v) => s + (v > 0 ? v : 0), 0);
+
+  // Loans total
+  const totalLoans = (loans || []).reduce((s, l) => s + (l.amount || 0), 0);
+
+  // Total Liabilities
+  const totalLiabilities = totalSupplierPayables + totalLoans;
+
+  // Net Worth
+  const netWorth = totalAssets - totalLiabilities;
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  result.innerHTML = `
+    <div class="space-y-4">
+
+      <!-- ASSETS -->
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="bg-green-700 text-white px-4 py-3 flex justify-between items-center cursor-pointer" onclick="document.getElementById('bs_assets').classList.toggle('hidden')">
+          <div class="font-bold">📈 Assets</div>
+          <div class="font-bold text-lg">${fmt(totalAssets)}</div>
+        </div>
+        <div id="bs_assets">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr class="border-b"><td class="px-4 py-3 text-gray-600">💵 Cash in Hand</td><td class="px-4 py-3 text-right font-bold text-green-700">${fmt(cashBalance)}</td></tr>
+              <tr class="border-b bg-gray-50"><td class="px-4 py-3 text-gray-600">🏦 Bank Balance</td><td class="px-4 py-3 text-right font-bold text-green-700">${fmt(bankBalance)}</td></tr>
+              <tr class="border-b"><td class="px-4 py-3 text-gray-600">📦 Stock Value</td><td class="px-4 py-3 text-right font-bold text-green-700">${fmt(stockValue)}</td></tr>
+              <tr class="border-b bg-gray-50"><td class="px-4 py-3 text-gray-600">👥 Customer Receivables</td><td class="px-4 py-3 text-right font-bold text-green-700">${fmt(totalReceivables)}</td></tr>
+              <tr class="border-b"><td class="px-4 py-3 text-gray-600 font-medium">🏗️ Fixed Assets</td><td class="px-4 py-3 text-right font-bold text-green-700">${fmt(totalFixedAssets)}</td></tr>
+              ${(fixedAssets || []).map(a => `
+                <tr class="border-b bg-green-50">
+                  <td class="px-6 py-2 text-xs text-gray-500">↳ ${a.name}</td>
+                  <td class="px-4 py-2 text-right text-xs text-green-600 flex items-center justify-end gap-2">
+                    ${fmt(a.value)}
+                    <button onclick="editFixedAsset('${a.id}','${a.name.replace(/'/g,"\\'")}',${a.value})" class="text-blue-400 ml-2">✏️</button>
+                    <button onclick="deleteFixedAsset('${a.id}')" class="text-red-400">🗑</button>
+                  </td>
+                </tr>`).join('')}
+              <tr class="bg-green-50">
+                <td colspan="2" class="px-4 py-2">
+                  <button onclick="toggleAddFixedAsset()" class="text-green-700 text-xs font-bold">+ Add Fixed Asset</button>
+                  <div id="add_fixed_asset_form" class="hidden mt-2 flex gap-2">
+                    <input id="fa_name" placeholder="Asset name" class="border rounded px-2 py-1 text-xs flex-1" />
+                    <input id="fa_value" type="number" placeholder="Value ₹" class="border rounded px-2 py-1 text-xs w-28" />
+                    <button onclick="saveFixedAsset()" class="bg-green-700 text-white px-3 py-1 rounded text-xs">Save</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LIABILITIES -->
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="bg-red-700 text-white px-4 py-3 flex justify-between items-center cursor-pointer" onclick="document.getElementById('bs_liabilities').classList.toggle('hidden')">
+          <div class="font-bold">📉 Liabilities</div>
+          <div class="font-bold text-lg">${fmt(totalLiabilities)}</div>
+        </div>
+        <div id="bs_liabilities">
+          <table class="w-full text-sm">
+            <tbody>
+              <tr class="border-b"><td class="px-4 py-3 text-gray-600">🏢 Supplier Payables</td><td class="px-4 py-3 text-right font-bold text-red-600">${fmt(totalSupplierPayables)}</td></tr>
+              <tr class="border-b bg-gray-50"><td class="px-4 py-3 text-gray-600 font-medium">🏦 Loans / Borrowings</td><td class="px-4 py-3 text-right font-bold text-red-600">${fmt(totalLoans)}</td></tr>
+              ${(loans || []).map(l => `
+                <tr class="border-b bg-red-50">
+                  <td class="px-6 py-2 text-xs text-gray-500">↳ ${l.name}</td>
+                  <td class="px-4 py-2 text-right text-xs text-red-600 flex items-center justify-end gap-2">
+                    ${fmt(l.amount)}
+                    <button onclick="editLoan('${l.id}','${l.name.replace(/'/g,"\\'")}',${l.amount})" class="text-blue-400 ml-2">✏️</button>
+                    <button onclick="deleteLoan('${l.id}')" class="text-red-400">🗑</button>
+                  </td>
+                </tr>`).join('')}
+              <tr class="bg-red-50">
+                <td colspan="2" class="px-4 py-2">
+                  <button onclick="toggleAddLoan()" class="text-red-700 text-xs font-bold">+ Add Loan</button>
+                  <div id="add_loan_form" class="hidden mt-2 flex gap-2">
+                    <input id="loan_name" placeholder="Loan name" class="border rounded px-2 py-1 text-xs flex-1" />
+                    <input id="loan_amount" type="number" placeholder="Amount ₹" class="border rounded px-2 py-1 text-xs w-28" />
+                    <button onclick="saveLoan()" class="bg-red-700 text-white px-3 py-1 rounded text-xs">Save</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NET WORTH -->
+      <div class="bg-gray-800 text-white rounded-xl shadow p-4 flex justify-between items-center">
+        <div>
+          <div class="font-bold text-lg">💼 Net Worth</div>
+          <div class="text-xs text-gray-400">Assets − Liabilities · as of ${today}</div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-2xl ${netWorth >= 0 ? 'text-green-400' : 'text-red-400'}">${fmt(netWorth)}</div>
+        </div>
+      </div>
+
+    </div>`;
+}
+
+function toggleAddFixedAsset() {
+  const form = document.getElementById('add_fixed_asset_form');
+  if (form) form.classList.toggle('hidden');
+}
+
+function toggleAddLoan() {
+  const form = document.getElementById('add_loan_form');
+  if (form) form.classList.toggle('hidden');
+}
+
+async function saveFixedAsset() {
+  const name = document.getElementById('fa_name').value.trim();
+  const value = parseFloat(document.getElementById('fa_value').value);
+  if (!name || !value) { alert('Name and value are required!'); return; }
+  const { error } = await db.from('fixed_assets').insert({ name, value });
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Fixed asset saved! ✅');
+  loadBalanceSheet();
+}
+
+async function editFixedAsset(id, name, value) {
+  const newName = prompt('Edit asset name:', name);
+  if (!newName) return;
+  const newValue = prompt('Edit value:', value);
+  if (!newValue || isNaN(newValue)) return;
+  await db.from('fixed_assets').update({ name: newName, value: parseFloat(newValue) }).eq('id', id);
+  alert('Updated! ✅');
+  loadBalanceSheet();
+}
+
+async function deleteFixedAsset(id) {
+  if (!confirm('Delete this fixed asset?')) return;
+  await db.from('fixed_assets').delete().eq('id', id);
+  alert('Deleted! ✅');
+  loadBalanceSheet();
+}
+
+async function saveLoan() {
+  const name = document.getElementById('loan_name').value.trim();
+  const amount = parseFloat(document.getElementById('loan_amount').value);
+  if (!name || !amount) { alert('Name and amount are required!'); return; }
+  const { error } = await db.from('loans').insert({ name, amount });
+  if (error) { alert('Error: ' + error.message); return; }
+  alert('Loan saved! ✅');
+  loadBalanceSheet();
+}
+
+async function editLoan(id, name, amount) {
+  const newName = prompt('Edit loan name:', name);
+  if (!newName) return;
+  const newAmount = prompt('Edit amount:', amount);
+  if (!newAmount || isNaN(newAmount)) return;
+  await db.from('loans').update({ name: newName, amount: parseFloat(newAmount) }).eq('id', id);
+  alert('Updated! ✅');
+  loadBalanceSheet();
+}
+
+async function deleteLoan(id) {
+  if (!confirm('Delete this loan?')) return;
+  await db.from('loans').delete().eq('id', id);
+  alert('Deleted! ✅');
+  loadBalanceSheet();
+}
+
+async function loadTrialBalance() {
+  const result = document.getElementById('trial_result');
+  if (!result) return;
+  result.innerHTML = '<div class="text-center text-gray-400 py-6">Loading...</div>';
+
+  const [
+    { data: orders },
+    { data: purchases },
+    { data: expenses },
+    { data: cbLedger },
+    { data: creditSummary },
+    { data: supplierLedger },
+    { data: fixedAssets },
+    { data: loans },
+  ] = await Promise.all([
+    db.from('orders').select('total_amount'),
+    db.from('purchases').select('total_amount'),
+    db.from('expenses').select('amount'),
+    db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false }),
+    db.from('credit_summary').select('*'),
+    db.from('supplier_ledger').select('*'),
+    db.from('fixed_assets').select('*'),
+    db.from('loans').select('*'),
+  ]);
+
+  const cashLedger = (cbLedger || []).filter(l => l.account_type === 'cash');
+  const bankLedger = (cbLedger || []).filter(l => l.account_type === 'bank');
+  const cashBalance = cashLedger.length > 0 ? cashLedger[0].running_balance : 0;
+  const bankBalance = bankLedger.length > 0 ? bankLedger[0].running_balance : 0;
+
+  const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalPurchases = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
+  const totalExpenses = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+  const totalReceivables = (creditSummary || []).reduce((s, c) => s + (c.balance > 0 ? c.balance : 0), 0);
+
+  const supplierMap = {};
+  (supplierLedger || []).forEach(l => {
+    if (!supplierMap[l.supplier_id]) supplierMap[l.supplier_id] = 0;
+    supplierMap[l.supplier_id] += l.type === 'debit' ? l.amount : -l.amount;
+  });
+  const totalSupplierPayables = Object.values(supplierMap).reduce((s, v) => s + (v > 0 ? v : 0), 0);
+  const totalFixedAssets = (fixedAssets || []).reduce((s, a) => s + (a.value || 0), 0);
+  const totalLoans = (loans || []).reduce((s, l) => s + (l.amount || 0), 0);
+
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  const entries = [
+    { account: 'Sales Revenue', debit: 0, credit: totalSales },
+    { account: 'Purchases / COGS', debit: totalPurchases, credit: 0 },
+    { account: 'Expenses', debit: totalExpenses, credit: 0 },
+    { account: 'Cash in Hand', debit: cashBalance, credit: 0 },
+    { account: 'Bank Balance', debit: bankBalance, credit: 0 },
+    { account: 'Customer Receivables', debit: totalReceivables, credit: 0 },
+    { account: 'Supplier Payables', debit: 0, credit: totalSupplierPayables },
+    { account: 'Fixed Assets', debit: totalFixedAssets, credit: 0 },
+    { account: 'Loans / Borrowings', debit: 0, credit: totalLoans },
+  ];
+
+  const totalDebit = entries.reduce((s, e) => s + e.debit, 0);
+  const totalCredit = entries.reduce((s, e) => s + e.credit, 0);
+  const diff = totalDebit - totalCredit;
+  if (diff > 0) entries.push({ account: 'Net Profit (Balancing)', debit: 0, credit: diff });
+  else if (diff < 0) entries.push({ account: 'Net Loss (Balancing)', debit: Math.abs(diff), credit: 0 });
+
+  const finalDebit = entries.reduce((s, e) => s + e.debit, 0);
+  const finalCredit = entries.reduce((s, e) => s + e.credit, 0);
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  result.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="font-bold text-gray-700 mb-1">⚖️ Trial Balance — as of ${today}</div>
+      <div class="text-xs text-gray-400 mb-4">All figures are cumulative from the beginning</div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr class="bg-gray-800 text-white">
+              <th class="px-3 py-2 text-left">Account</th>
+              <th class="px-3 py-2 text-right">Debit</th>
+              <th class="px-3 py-2 text-right">Credit</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${entries.map((e, i) => `
+              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
+                <td class="px-3 py-2 text-gray-700">${e.account}</td>
+                <td class="px-3 py-2 text-right font-medium ${e.debit > 0 ? 'text-gray-800' : 'text-gray-300'}">${e.debit > 0 ? fmt(e.debit) : '—'}</td>
+                <td class="px-3 py-2 text-right font-medium ${e.credit > 0 ? 'text-gray-800' : 'text-gray-300'}">${e.credit > 0 ? fmt(e.credit) : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="bg-gray-800 text-white font-bold">
+              <td class="px-3 py-2">Total</td>
+              <td class="px-3 py-2 text-right">${fmt(finalDebit)}</td>
+              <td class="px-3 py-2 text-right">${fmt(finalCredit)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="mt-3 text-center text-xs ${finalDebit === finalCredit ? 'text-green-600' : 'text-red-500'} font-bold">
+        ${finalDebit === finalCredit ? '✅ Trial Balance matches!' : '⚠️ Difference: ' + fmt(Math.abs(finalDebit - finalCredit))}
+      </div>
+    </div>`;
+}
+  
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
