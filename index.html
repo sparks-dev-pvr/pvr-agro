@@ -2865,7 +2865,7 @@ async function showAdminTab(tab) {
 
   } else if (tab === 'purchases') {
     const { data: purchases } = await db.from('purchases').select('*').order('created_at', { ascending: false });
-    const { data: purchaseItems } = await db.from('purchase_items').select('*');
+    const { data: purchaseItems } = await db.from('purchase_items').select('*').order('created_at', { ascending: false });
     window._allPurchases = purchases || [];
     window._allPurchaseItems = purchaseItems || [];
     content.innerHTML = `
