@@ -3346,8 +3346,8 @@ async function loadPLReport() {
   const fromDT = from + 'T00:00:00+05:30';
   const toDT = to + 'T23:59:59+05:30';
 
-  const [{ data: orders }, { data: purchases }, { data: expenses }] = await Promise.all([
-    db.from('orders').select('total_amount').gte('created_at', fromDT).lte('created_at', toDT),
+  const [{ data: orders }, { data: purchases }, { data: expenses }, { data: allProducts }] = await Promise.all([
+    db.from('orders').select('*, customers(name)').gte('created_at', fromDT).lte('created_at', toDT),
     db.from('purchases').select('total_amount, supplier_name, bill_date, bill_number').gte('created_at', fromDT).lte('created_at', toDT),
     db.from('expenses').select('amount, category, description, expense_date').gte('expense_date', from).lte('expense_date', to),
   ]);
