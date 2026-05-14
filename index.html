@@ -3420,6 +3420,9 @@ async function loadPLReport() {
         `<tr class="bg-gray-800 text-white font-bold"><td colspan="3" class="px-2 py-2">Total Expenses</td><td class="px-2 py-2 text-right">${fmt(totalExpenses)}</td></tr></tbody></table></div>`}
       </div>
     </div>`;
+
+  const orderPLHTML = await loadOrderPL(orders, plOrderItems, allProducts);
+  result.innerHTML += orderPLHTML;
 }
 
 async function loadGSTR1Report() {
