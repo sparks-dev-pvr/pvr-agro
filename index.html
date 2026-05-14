@@ -2571,6 +2571,24 @@ async function showReportsTab(subTab) {
         <button onclick="loadGSTR3BReport()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold text-sm">Generate GSTR-3B</button>
       </div>
       <div id="gstr3b_result"></div>`;
+
+  } else if (activeTab === 'balancesheet') {
+    content.innerHTML = `<h2 class="text-xl font-bold mb-4">Reports</h2>${tabsHTML}
+      <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-center">
+        <div class="font-bold text-gray-700">📊 Balance Sheet — as of Today</div>
+        <button onclick="loadBalanceSheet()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold">Load</button>
+      </div>
+      <div id="bs_result"></div>`;
+    loadBalanceSheet();
+
+  } else if (activeTab === 'trial') {
+    content.innerHTML = `<h2 class="text-xl font-bold mb-4">Reports</h2>${tabsHTML}
+      <div class="bg-white rounded-xl shadow p-4 mb-4 flex justify-between items-center">
+        <div class="font-bold text-gray-700">⚖️ Trial Balance — as of Today</div>
+        <button onclick="loadTrialBalance()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold">Load</button>
+      </div>
+      <div id="trial_result"></div>`;
+    loadTrialBalance();
   }
 }
 
