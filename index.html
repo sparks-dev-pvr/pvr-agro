@@ -2668,17 +2668,42 @@ async function loadStockReport() {
     <div class="bg-white rounded-xl shadow p-4">
       <div class="font-bold text-gray-700 mb-3">📦 Stock by Product (${rows.length} variants with stock)</div>
       ${rows.length === 0 ? '<div class="text-gray-400 text-center py-4">No stock found</div>' :
-      '<div class="overflow-x-auto"><table class="w-full text-xs"><thead><tr class="bg-green-700 text-white"><th class="px-2 py-2 text-left">Product</th><th class="px-2 py-2 text-left">Size · Pack</th><th class="px-2 py-2 text-right">Stock</th><th class="px-2 py-2 text-right">Cost/box</th><th class="px-2 py-2 text-right">Sale/box</th><th class="px-2 py-2 text-right">Purchase Value</th><th class="px-2 py-2 text-right">Sale Value</th></tr></thead><tbody>' +
-      rows.map((r,i) => `<tr class="${i%2===0?'bg-white':'bg-gray-50'} border-b">
-        <td class="px-2 py-2 font-medium">${r.name}</td>
-        <td class="px-2 py-2 text-gray-500">${r.size} · ${r.label}</td>
-        <td class="px-2 py-2 text-right font-bold">${r.stock}</td>
-        <td class="px-2 py-2 text-right text-red-500">${r.avgCost > 0 ? fmt(r.avgCost) : '—'}</td>
-        <td class="px-2 py-2 text-right text-green-600">${fmt(r.salePrice)}</td>
-        <td class="px-2 py-2 text-right text-red-500">${r.avgCost > 0 ? fmt(r.purchaseVal) : '—'}</td>
-        <td class="px-2 py-2 text-right text-green-700 font-bold">${fmt(r.saleVal)}</td>
-      </tr>`).join('') +
-      `</tbody><tfoot><tr class="bg-gray-800 text-white font-bold"><td colspan="5" class="px-2 py-2">Total</td><td class="px-2 py-2 text-right text-red-300">${fmt(totalPurchaseValue)}</td><td class="px-2 py-2 text-right text-green-300">${fmt(totalSaleValue)}</td></tr></tfoot></table></div>`}
+      (() => {
+        const grouped = {};
+        rows.forEach(r => {
+          if (!grouped[r.name]) grouped[r.name] = [];
+          grouped[r.name].push(r);
+        });
+        return '<div class="space-y-3">' +
+          Object.entries(grouped).map(([productName, variants]) => {
+            const totalSaleVal = variants.reduce((s, r) => s + r.saleVal, 0);
+            const totalPurVal = variants.reduce((s, r) => s + r.purchaseVal, 0);
+            const totalStk = variants.reduce((s, r) => s + r.stock, 0);
+            const uid = productName.replace(/[^a-zA-Z0-9]/g, '_');
+            return '<div class="bg-white border border-gray-200 rounded-xl overflow-hidden">' +
+              '<div class="flex justify-between items-center px-3 py-3 cursor-pointer bg-gray-50 hover:bg-gray-100" onclick="var el=document.getElementById(\'stock_var_' + uid + '\'); el.classList.toggle(\'hidden\')">' +
+              '<div class="font-bold text-green-800 text-sm">' + productName + '</div>' +
+              '<div class="flex gap-4 items-center">' +
+              '<span class="text-xs text-gray-500">Stock: <b>' + totalStk + '</b></span>' +
+              '<span class="text-xs text-red-500">' + (totalPurVal > 0 ? fmt(totalPurVal) : '—') + '</span>' +
+              '<span class="text-xs text-green-700 font-bold">' + fmt(totalSaleVal) + '</span>' +
+              '<span class="text-gray-400 text-xs">▾</span>' +
+              '</div></div>' +
+              '<div id="stock_var_' + uid + '" class="hidden">' +
+              '<table class="w-full text-xs"><thead><tr class="bg-green-50 text-gray-600"><th class="px-3 py-2 text-left">Size · Pack</th><th class="px-3 py-2 text-right">Stock</th><th class="px-3 py-2 text-right">Cost/box</th><th class="px-3 py-2 text-right">Sale/box</th><th class="px-3 py-2 text-right">Purchase Val</th><th class="px-3 py-2 text-right">Sale Val</th></tr></thead><tbody>' +
+              variants.map(r =>
+                '<tr class="border-t border-gray-100"><td class="px-3 py-2 text-gray-500">' + r.size + ' · ' + r.label + '</td>' +
+                '<td class="px-3 py-2 text-right font-bold">' + r.stock + '</td>' +
+                '<td class="px-3 py-2 text-right text-red-500">' + (r.avgCost > 0 ? fmt(r.avgCost) : '—') + '</td>' +
+                '<td class="px-3 py-2 text-right text-green-600">' + fmt(r.salePrice) + '</td>' +
+                '<td class="px-3 py-2 text-right text-red-500">' + (r.avgCost > 0 ? fmt(r.purchaseVal) : '—') + '</td>' +
+                '<td class="px-3 py-2 text-right text-green-700 font-bold">' + fmt(r.saleVal) + '</td></tr>'
+              ).join('') +
+              '</tbody></table></div></div>';
+          }).join('') +
+        '</div>' +
+        '<div class="bg-gray-800 text-white rounded-xl px-3 py-3 mt-3 flex justify-between items-center"><span class="font-bold text-sm">Total</span><div class="flex gap-4"><span class="text-xs text-red-300">' + fmt(totalPurchaseValue) + '</span><span class="text-xs text-green-300 font-bold">' + fmt(totalSaleValue) + '</span></div></div>';
+      })()}
     </div>`;
 }
 
