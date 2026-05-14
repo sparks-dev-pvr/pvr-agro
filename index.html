@@ -3242,6 +3242,100 @@ function setGSTR1Range(which) {
   if (toEl) toEl.value = getISTDateString(to);
 }
 
+async function loadOrderPL(orders, orderItems, products) {
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+  // Build cost price lookup: "productname||variantsize" -> cost_price
+  const costMap = {};
+  (products || []).forEach(p => {
+    (p.product_variants || []).forEach(v => {
+      (v.product_packagings || []).forEach(pk => {
+        const key = (p.name || '').toLowerCase() + '||' + (v.bag_size || '').toLowerCase();
+        if (!costMap[key]) costMap[key] = pk.cost_price || 0;
+      });
+    });
+  });
+
+  const orderRows = (orders || []).map(o => {
+    const items = (orderItems || []).filter(i => i.order_id === o.id);
+    let totalCost = 0;
+    let costKnown = true;
+    items.forEach(item => {
+      const key = (item.product_name || '').toLowerCase() + '||' + (item.variant_name || '').toLowerCase();
+      const cost = costMap[key];
+      if (cost === undefined || cost === 0) costKnown = false;
+      totalCost += (cost || 0) * (item.quantity || 0);
+    });
+    const sale = o.total_amount || 0;
+    const profit = sale - totalCost;
+    const margin = sale > 0 ? ((profit / sale) * 100).toFixed(1) : 0;
+    return { o, items, sale, totalCost, profit, margin, costKnown };
+  });
+
+  const totalSale = orderRows.reduce((s, r) => s + r.sale, 0);
+  const totalCost = orderRows.reduce((s, r) => s + r.totalCost, 0);
+  const totalProfit = totalSale - totalCost;
+  const overallMargin = totalSale > 0 ? ((totalProfit / totalSale) * 100).toFixed(1) : 0;
+
+  return `
+    <div class="bg-white rounded-xl shadow p-4 mt-4">
+      <div class="font-bold text-gray-700 mb-1">🧾 Order-wise P&L</div>
+      <div class="text-xs text-gray-400 mb-3">Cost = cost price per box × quantity sold</div>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="bg-green-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400">Total Sale</div>
+          <div class="font-bold text-green-700">${fmt(totalSale)}</div>
+        </div>
+        <div class="bg-red-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400">Total Cost</div>
+          <div class="font-bold text-red-600">${fmt(totalCost)}</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-3 text-center">
+          <div class="text-xs text-gray-400">Net Profit</div>
+          <div class="font-bold ${totalProfit >= 0 ? 'text-green-700' : 'text-red-600'}">${fmt(totalProfit)}</div>
+          <div class="text-xs text-gray-400">Margin: ${overallMargin}%</div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="bg-gray-800 text-white">
+              <th class="px-2 py-2 text-left">Date</th>
+              <th class="px-2 py-2 text-left">Customer</th>
+              <th class="px-2 py-2 text-left">Items</th>
+              <th class="px-2 py-2 text-right">Sale</th>
+              <th class="px-2 py-2 text-right">Cost</th>
+              <th class="px-2 py-2 text-right">Profit</th>
+              <th class="px-2 py-2 text-right">Margin</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orderRows.length === 0 ? '<tr><td colspan="7" class="text-center py-6 text-gray-400">No orders in this period</td></tr>' :
+            orderRows.map((r, i) => `
+              <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b">
+                <td class="px-2 py-2 text-gray-500 whitespace-nowrap">${new Date(r.o.created_at).toLocaleDateString('en-IN')}</td>
+                <td class="px-2 py-2 font-medium">${r.o.customers?.name || 'Unknown'}</td>
+                <td class="px-2 py-2 text-gray-400" style="max-width:160px;word-break:break-word;">${r.items.map(it => (it.product_name || '') + ' x' + it.quantity).join(', ')}</td>
+                <td class="px-2 py-2 text-right text-green-700 font-bold">${fmt(r.sale)}</td>
+                <td class="px-2 py-2 text-right text-red-500">${r.totalCost > 0 ? fmt(r.totalCost) : '<span class="text-gray-300">—</span>'}</td>
+                <td class="px-2 py-2 text-right font-bold ${r.profit >= 0 ? 'text-green-700' : 'text-red-600'}">${r.totalCost > 0 ? fmt(r.profit) : '<span class="text-gray-300">—</span>'}</td>
+                <td class="px-2 py-2 text-right ${r.profit >= 0 ? 'text-green-600' : 'text-red-500'}">${r.totalCost > 0 ? r.margin + '%' : '—'}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr class="bg-gray-800 text-white font-bold">
+              <td colspan="3" class="px-2 py-2">Total</td>
+              <td class="px-2 py-2 text-right">${fmt(totalSale)}</td>
+              <td class="px-2 py-2 text-right">${fmt(totalCost)}</td>
+              <td class="px-2 py-2 text-right ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}">${fmt(totalProfit)}</td>
+              <td class="px-2 py-2 text-right">${overallMargin}%</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
+}
+
 async function loadPLReport() {
   const from = document.getElementById('pl_from').value;
   const to = document.getElementById('pl_to').value;
