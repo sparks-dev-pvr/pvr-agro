@@ -1263,6 +1263,8 @@ async function saveNewProduct() {
   const desc = document.getElementById('np_desc').value.trim();
   const hsn = document.getElementById('np_hsn').value.trim();
   if (!name) { alert('Product name is required!'); return; }
+  const chemical = document.getElementById('np_chemical').value.trim();
+  if (!chemical) { alert('Chemical name is required!'); return; }
   let image_url = null;
   const imageFile = document.getElementById('np_image').files[0];
   if (imageFile) {
