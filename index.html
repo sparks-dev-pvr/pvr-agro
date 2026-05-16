@@ -1179,15 +1179,25 @@ function adminLogin() {
 }
 function adminLogout() { state.adminLoggedIn = false; navigate('home'); }
 
-function showAddProduct() {
+async function showAddProduct() {
   const form = document.getElementById('add_product_form');
+  const { data: suppliers } = await db.from('suppliers').select('name').order('name');
+  const supplierOptions = (suppliers || []).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
   form.innerHTML = `<div class="bg-white rounded-xl shadow p-4 mb-4">
     <h3 class="font-bold mb-4 text-green-700">Add New Product</h3>
     <div class="space-y-3 mb-4">
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Product Name *</label><input id="np_name" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Category</label><select id="np_category" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"><option>Bio-Pesticides</option><option>Pesticides</option><option>Fungicides</option><option>Seeds</option><option>Fertilizers</option><option>Herbicides</option><option>Weedicides</option></select></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Description</label><input id="np_desc" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
-      <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Company Name</label><input id="np_company" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
+      <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Company Name</label>
+        <select id="np_company_select" onchange="document.getElementById('np_company_other').classList.toggle('hidden', this.value !== '__other__'); if(this.value !== '__other__') document.getElementById('np_company').value=this.value;" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 mb-1">
+          <option value="">-- Select Supplier --</option>
+          ${supplierOptions}
+          <option value="__other__">✏️ Type Manually</option>
+        </select>
+        <input id="np_company_other" placeholder="Type company name" class="hidden w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" oninput="document.getElementById('np_company').value=this.value" />
+        <input id="np_company" type="hidden" />
+      </div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Chemical Name (optional)</label><input id="np_chemical" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">HSN/SAC Code (optional)</label><input id="np_hsn" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Product Image (optional)</label><input id="np_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
