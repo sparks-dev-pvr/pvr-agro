@@ -1188,7 +1188,7 @@ async function showAddProduct() {
     <div class="space-y-3 mb-4">
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Product Name *</label><input id="np_name" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Category</label><select id="np_category" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"><option>Bio-Pesticides</option><option>Pesticides</option><option>Fungicides</option><option>Seeds</option><option>Fertilizers</option><option>Herbicides</option><option>Weedicides</option></select></div>
-      <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Description</label><input id="np_desc" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
+      <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Description (optional)</label><input id="np_desc" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" /></div>
       <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Company Name</label>
         <select id="np_company_select" onchange="document.getElementById('np_company_other').classList.toggle('hidden', this.value !== '__other__'); if(this.value !== '__other__') document.getElementById('np_company').value=this.value;" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 mb-1">
           <option value="">-- Select Supplier --</option>
