@@ -3986,6 +3986,171 @@ async function loadTrialBalance() {
     </div>`;
 }
   
+async function loadDashboard() {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading dashboard...</div>';
+
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const fromDT = todayStr + 'T00:00:00+05:30';
+  const toDT = todayStr + 'T23:59:59+05:30';
+
+  const [
+    { data: todayOrders },
+    { data: allOrders },
+    { data: credits },
+    { data: cbLedger },
+    { data: products },
+    { data: purchases },
+  ] = await Promise.all([
+    db.from('orders').select('*, customers(name,phone)').gte('created_at', fromDT).lte('created_at', toDT),
+    db.from('orders').select('order_status, total_amount'),
+    db.from('credit_summary').select('*'),
+    db.from('cash_bank_ledger').select('*').order('created_at', { ascending: false }),
+    db.from('products').select('*, product_variants(*, product_packagings(*))'),
+    db.from('purchases').select('created_at, total_amount').gte('created_at', fromDT).lte('created_at', toDT),
+  ]);
+
+  const todaySales = (todayOrders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const todayPurchases = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
+  const pendingOrders = (allOrders || []).filter(o => o.order_status === 'pending').length;
+  const totalOutstanding = (credits || []).reduce((s, c) => s + (c.balance > 0 ? c.balance : 0), 0);
+  const cashLedger = (cbLedger || []).filter(l => l.account_type === 'cash');
+  const bankLedger = (cbLedger || []).filter(l => l.account_type === 'bank');
+  const cashBal = cashLedger.length > 0 ? cashLedger[0].running_balance : 0;
+  const bankBal = bankLedger.length > 0 ? bankLedger[0].running_balance : 0;
+
+  // Low stock alerts
+  const lowStock = [];
+  const expiring = [];
+  const now = new Date();
+  (products || []).forEach(p => {
+    (p.product_variants || []).forEach(v => {
+      (v.product_packagings || []).forEach(pk => {
+        if ((pk.stock_quantity || 0) <= 5 && (pk.stock_quantity || 0) > 0) {
+          lowStock.push({ name: p.name, size: v.bag_size, label: pk.box_label, stock: pk.stock_quantity });
+        }
+        if ((pk.stock_quantity || 0) === 0) {
+          lowStock.push({ name: p.name, size: v.bag_size, label: pk.box_label, stock: 0, outOfStock: true });
+        }
+      });
+    });
+  });
+
+  const overdueCredits = (credits || []).filter(c => c.balance > 0).sort((a, b) => b.balance - a.balance).slice(0, 5);
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+  const todayLabel = today.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
+
+  content.innerHTML = `
+    <div class="space-y-4">
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="text-xl font-bold text-gray-800">Good ${today.getHours() < 12 ? 'Morning' : today.getHours() < 17 ? 'Afternoon' : 'Evening'}! 🌿</div>
+          <div class="text-xs text-gray-400">${todayLabel}</div>
+        </div>
+      </div>
+
+      <!-- Today Stats -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-green-700 text-white rounded-xl p-4 shadow">
+          <div class="text-xs text-green-200">Today's Sales</div>
+          <div class="font-bold text-xl">${fmt(todaySales)}</div>
+          <div class="text-xs text-green-200">${(todayOrders||[]).length} order(s)</div>
+        </div>
+        <div class="bg-orange-500 text-white rounded-xl p-4 shadow">
+          <div class="text-xs text-orange-100">Pending Orders</div>
+          <div class="font-bold text-xl">${pendingOrders}</div>
+          <div class="text-xs text-orange-100">need attention</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow border">
+          <div class="text-xs text-gray-400">💵 Cash</div>
+          <div class="font-bold text-orange-600">${fmt(cashBal)}</div>
+          <div class="text-xs text-gray-400">🏦 Bank: ${fmt(bankBal)}</div>
+        </div>
+        <div class="bg-white rounded-xl p-4 shadow border">
+          <div class="text-xs text-gray-400">Outstanding</div>
+          <div class="font-bold text-red-500">${fmt(totalOutstanding)}</div>
+          <div class="text-xs text-gray-400">${(credits||[]).filter(c=>c.balance>0).length} customers</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">⚡ Quick Actions</div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="showAdminTab('orders')" class="bg-green-700 text-white py-3 rounded-xl text-sm font-bold">📦 View Orders</button>
+          <button onclick="showAdminTab('orders'); setTimeout(()=>showCreateManualOrder(),300)" class="bg-blue-600 text-white py-3 rounded-xl text-sm font-bold">➕ New Order</button>
+          <button onclick="showAdminTab('credit')" class="bg-orange-500 text-white py-3 rounded-xl text-sm font-bold">💳 Credit Ledger</button>
+          <button onclick="showAdminTab('reports')" class="bg-purple-600 text-white py-3 rounded-xl text-sm font-bold">📊 Reports</button>
+        </div>
+      </div>
+
+      <!-- Low Stock Alerts -->
+      ${lowStock.length > 0 ? `
+      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-red-400">
+        <div class="font-bold text-red-600 mb-3">⚠️ Stock Alerts (${lowStock.length})</div>
+        <div class="space-y-2">
+          ${lowStock.slice(0, 8).map(s => `
+            <div class="flex justify-between items-center text-sm border-b pb-1">
+              <span class="text-gray-700">${s.name} · ${s.size} · ${s.label}</span>
+              <span class="font-bold ${s.outOfStock ? 'text-red-600' : 'text-orange-500'}">${s.outOfStock ? '❌ Out' : '⚠️ ' + s.stock + ' left'}</span>
+            </div>`).join('')}
+        </div>
+        <button onclick="showReportsTab('stock')" class="mt-3 text-xs text-blue-600 underline">View Full Stock Report →</button>
+      </div>` : '<div class="bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 text-sm font-medium text-center">✅ All products well stocked!</div>'}
+
+      <!-- Top Overdue Customers -->
+      ${overdueCredits.length > 0 ? `
+      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-orange-400">
+        <div class="font-bold text-orange-600 mb-3">💳 Top Pending Payments</div>
+        <div class="space-y-2">
+          ${overdueCredits.map(c => `
+            <div class="flex justify-between items-center text-sm border-b pb-1">
+              <div>
+                <div class="font-medium">${c.name}</div>
+                <div class="text-xs text-gray-400">${c.phone}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-red-500">${fmt(c.balance)}</div>
+                <button onclick="shareWhatsApp('${c.phone}','${c.name.replace(/'/g,"\\'")}',${c.balance})" class="text-xs bg-green-500 text-white px-2 py-0.5 rounded-full mt-1">📲 WhatsApp</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        <button onclick="showAdminTab('credit')" class="mt-3 text-xs text-blue-600 underline">View All Credit →</button>
+      </div>` : ''}
+
+      <!-- Today's Orders -->
+      ${(todayOrders||[]).length > 0 ? `
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="font-bold text-gray-700 mb-3">📋 Today's Orders</div>
+        <div class="space-y-2">
+          ${(todayOrders||[]).map(o => `
+            <div class="flex justify-between items-center text-sm border-b pb-2">
+              <div>
+                <div class="font-medium">${o.customers?.name || 'Unknown'}</div>
+                <div class="text-xs text-gray-400">${o.customers?.phone || ''} · ${o.payment_method}</div>
+              </div>
+              <div class="text-right">
+                <div class="font-bold text-green-700">${fmt(o.total_amount)}</div>
+                <button onclick="generateInvoice('${o.id}')" class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">🧾 Invoice</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+
+    </div>`;
+}
+
+async function shareWhatsApp(phone, customerName, balance) {
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+  const message = `Dear ${customerName},\n\nThis is a friendly reminder from *P.V.R Agrochemicals*.\n\nYour outstanding balance is *${fmt(balance)}*.\n\nKindly arrange the payment at your earliest convenience.\n\nThank you 🌿\n— PVR Agro Team\n📞 9573711019`;
+  const encoded = encodeURIComponent(message);
+  const cleanPhone = phone.replace(/\D/g, '');
+  const wa = `https://wa.me/91${cleanPhone}?text=${encoded}`;
+  window.open(wa, '_blank');
+}
+
 function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
