@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Party Statement — PVR Agro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; background: #f0f0f0; color: #111; }
+
+#toolbar {
+  background: #15803d; color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+#toolbar h2 { font-size: 15px; font-weight: 700; flex: 1; }
+#toolbar button {
+  background: #fff; color: #15803d; border: none; padding: 7px 16px;
+  border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
+#toolbar button.secondary { background: rgba(255,255,255,0.2); color: #fff; }
+#toolbar .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#toolbar input, #toolbar select {
+  padding: 5px 10px; border-radius: 6px; border: none;
+  font-size: 12px; background: rgba(255,255,255,0.15); color: #fff;
+}
+#toolbar input::placeholder { color: rgba(255,255,255,0.6); }
+#toolbar input[type="date"] { color: #fff; }
+#toolbar label { font-size: 11px; color: rgba(255,255,255,0.8); }
+
+#statement_wrap { max-width: 960px; margin: 20px auto; padding: 0 12px 40px; }
+
+#statement_page {
+  background: #fff;
+  border: 1px solid #aaa;
+}
+
+/* HEADER */
+.stmt-header {
+  display: grid; grid-template-columns: 1fr auto;
+  border-bottom: 2px solid #15803d; padding: 14px 16px; gap: 12px;
+}
+.company-block { display: flex; gap: 12px; align-items: flex-start; }
+.company-logo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid #15803d; flex-shrink: 0; }
+.company-name { font-size: 14px; font-weight: 800; color: #15803d; margin-bottom: 2px; }
+.company-sub { font-size: 10px; color: #555; line-height: 1.6; }
+
+.stmt-title-block { text-align: right; }
+.stmt-title { font-size: 18px; font-weight: 800; color: #15803d; letter-spacing: 1px; }
+.stmt-subtitle { font-size: 10px; color: #888; margin-top: 2px; }
+
+/* PARTY + DATE ROW */
+.party-date-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #ccc;
+}
+.party-block { padding: 10px 14px; border-right: 1px solid #ccc; }
+.date-block { padding: 10px 14px; }
+.block-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.8px; margin-bottom: 5px; border-bottom: 1px solid #e5e5e5; padding-bottom: 3px; }
+.party-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.party-detail { font-size: 10px; color: #555; line-height: 1.7; }
+.date-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #f0f0f0; }
+.date-row:last-child { border-bottom: none; }
+.date-label { color: #888; }
+.date-value { font-weight: 700; }
+
+/* SUMMARY CARDS */
+.summary-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid #ccc; background: #f9fef9;
+}
+.summary-card { padding: 10px 12px; text-align: center; border-right: 1px solid #e5e5e5; }
+.summary-card:last-child { border-right: none; }
+.summary-label { font-size: 9px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; margin-bottom: 4px; }
+.summary-value { font-size: 14px; font-weight: 800; }
+.summary-value.green { color: #15803d; }
+.summary-value.red { color: #dc2626; }
+.summary-value.blue { color: #2563eb; }
+.summary-value.orange { color: #ea580c; }
+
+/* MAIN TABLE */
+.stmt-table { width: 100%; border-collapse: collapse; }
+.stmt-table thead tr { background: #15803d; color: #fff; }
+.stmt-table th {
+  padding: 7px 8px; font-size: 10px; font-weight: 700;
+  text-align: center; letter-spacing: 0.3px; border: 1px solid #0f6030;
+  white-space: nowrap;
+}
+.stmt-table th.left { text-align: left; }
+.stmt-table td {
+  padding: 5px 8px; font-size: 11px; border: 1px solid #e8e8e8;
+  vertical-align: middle;
+}
+.stmt-table td.center { text-align: center; }
+.stmt-table td.right { text-align: right; }
+.stmt-table tbody tr:nth-child(even) { background: #f9f9f9; }
+.stmt-table tbody tr:hover { background: #f0fdf4; }
+
+/* Row types */
+.row-sale td { }
+.row-payment td { background: #f0fdf4 !important; }
+.row-debit td { background: #fff7f7 !important; }
+
+.txn-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 10px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.3px;
+}
+.badge-sale { background: #dbeafe; color: #1e40af; }
+.badge-payment { background: #dcfce7; color: #166534; }
+.badge-debit { background: #fee2e2; color: #991b1b; }
+.badge-credit { background: #fef9c3; color: #854d0e; }
+
+.status-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 10px;
+  font-size: 9px; font-weight: 700;
+}
+.status-paid { background: #dcfce7; color: #166534; }
+.status-unpaid { background: #fee2e2; color: #991b1b; }
+.status-partial { background: #fef9c3; color: #854d0e; }
+
+/* TFOOT */
+.stmt-table tfoot tr { background: #1a2e1a; color: #fff; font-weight: 700; }
+.stmt-table tfoot td { padding: 8px; font-size: 12px; border: 1px solid #0f2010; }
+
+/* FOOTER */
+.stmt-footer {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-top: 2px solid #15803d; padding: 12px 16px; gap: 16px;
+  background: #f9fef9;
+}
+.footer-note { font-size: 10px; color: #666; line-height: 1.7; }
+.footer-note strong { color: #15803d; display: block; margin-bottom: 3px; font-size: 11px; }
+.sig-area { text-align: right; }
+.sig-line { border-top: 1px solid #333; margin-top: 30px; padding-top: 4px; font-size: 10px; font-weight: 700; display: inline-block; min-width: 120px; }
+
+/* NO DATA */
+.no-data { text-align: center; padding: 40px; color: #aaa; font-size: 13px; }
+
+/* LOADING */
+#loading { text-align: center; padding: 60px; font-size: 14px; color: #15803d; }
+
+@media print {
+  body { background: #fff; }
+  #toolbar { display: none !important; }
+  #statement_wrap { margin: 0; padding: 0; max-width: 100%; }
+  #statement_page { border: none; }
+  .stmt-table tbody tr:hover { background: inherit; }
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h2>📄 Party Statement — PVR Agro</h2>
+  <div class="filter-row">
+    <label>From:</label>
+    <input type="date" id="filter_from" onchange="applyFilters()" />
+    <label>To:</label>
+    <input type="date" id="filter_to" onchange="applyFilters()" />
+  </div>
+  <button class="secondary" onclick="window.close()">✕ Close</button>
+  <button onclick="window.print()">🖨️ Print / Save PDF</button>
+</div>
+
+<div id="statement_wrap">
+  <div id="loading">⏳ Loading party statement...</div>
+  <div id="statement_page" style="display:none">
+
+    <!-- HEADER -->
+    <div class="stmt-header">
+      <div class="company-block">
+        <img src="https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg"
+          class="company-logo" onerror="this.style.display='none'" />
+        <div>
+          <div class="company-name">P.V.R AGROCHEMICALS</div>
+          <div class="company-sub">
+            D.NO 4-10-1246, Block No 31, Plot No 45, Autonagar<br>
+            Hayathnagar (M), Rangareddy (Dt), Hyderabad - 500070<br>
+            Phone: 9573711019 &nbsp;|&nbsp; Email: pvragrochyd@gmail.com<br>
+            GSTIN: 36AJRPR1684F1ZP &nbsp;|&nbsp; State: 36-Telangana
+          </div>
+        </div>
+      </div>
+      <div class="stmt-title-block">
+        <div class="stmt-title">PARTY STATEMENT</div>
+        <div class="stmt-subtitle">Account Statement</div>
+        <div class="stmt-subtitle" id="stmt_date_range" style="margin-top:6px;font-weight:700;color:#15803d;font-size:11px;"></div>
+      </div>
+    </div>
+
+    <!-- PARTY + DATE -->
+    <div class="party-date-grid">
+      <div class="party-block">
+        <div class="block-label">Party Details</div>
+        <div class="party-name" id="party_name">—</div>
+        <div class="party-detail" id="party_detail">—</div>
+      </div>
+      <div class="date-block">
+        <div class="block-label">Account Summary</div>
+        <div class="date-row"><span class="date-label">Total Orders</span><span class="date-value" id="summary_orders">0</span></div>
+        <div class="date-row"><span class="date-label">Total Billed</span><span class="date-value" id="summary_billed">₹0</span></div>
+        <div class="date-row"><span class="date-label">Total Received</span><span class="date-value" id="summary_received">₹0</span></div>
+        <div class="date-row"><span class="date-label">Closing Balance</span><span class="date-value" id="summary_balance" style="color:#dc2626;">₹0</span></div>
+      </div>
+    </div>
+
+    <!-- SUMMARY CARDS -->
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-label">Total Sales</div>
+        <div class="summary-value green" id="card_sales">₹0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Total Received</div>
+        <div class="summary-value blue" id="card_received">₹0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Outstanding</div>
+        <div class="summary-value red" id="card_outstanding">₹0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Transactions</div>
+        <div class="summary-value orange" id="card_txns">0</div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <table class="stmt-table">
+      <thead>
+        <tr>
+          <th style="width:32px">#</th>
+          <th class="left" style="width:80px">Date</th>
+          <th class="left" style="width:80px">Txn Type</th>
+          <th class="left" style="width:80px">Ref No.</th>
+          <th class="left" style="min-width:160px">Description</th>
+          <th style="width:70px">Status</th>
+          <th style="width:90px">Debit (Dr)</th>
+          <th style="width:90px">Credit (Cr)</th>
+          <th style="width:100px">Txn Balance</th>
+          <th style="width:110px">Receivable Bal</th>
+        </tr>
+      </thead>
+      <tbody id="stmt_body">
+        <tr><td colspan="10" class="no-data">Loading...</td></tr>
+      </tbody>
+      <tfoot id="stmt_foot"></tfoot>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="stmt-footer">
+      <div class="footer-note">
+        <strong>Bank Details</strong>
+        Bank: State Bank of India, Hayatnagar<br>
+        Account No.: 39550894944<br>
+        IFSC: SBIN0011080<br>
+        Account Holder: P.V.R Agro Chemicals
+      </div>
+      <div class="sig-area">
+        <div style="font-size:10px;color:#555;margin-bottom:4px;">For: P.V.R AGROCHEMICALS</div>
+        <div class="sig-line">Authorized Signatory</div>
+        <div style="font-size:9px;color:#aaa;margin-top:6px;">This is a computer generated statement</div>
+      </div>
+    </div>
+
+  </div><!-- end statement_page -->
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZGphanVoZnFtdXV6amVqbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDY2ODcsImV4cCI6MjA5MzYyMjY4N30.Y1w43s7vx2V_XkgYvSUB0xTIsnGGFWyCU09z_r_otEg';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const fmt = n => '₹' + (n||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtShort = n => '₹' + (n||0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmtDate = d => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+let allRows = [];
+let customer = null;
+
+async function loadStatement() {
+  const params = new URLSearchParams(window.location.search);
+  const customerId = params.get('id');
+  if (!customerId) {
+    document.getElementById('loading').textContent = '❌ No customer ID provided.';
+    return;
+  }
+
+  // Set default date range (this financial year)
+  const now = new Date();
+  const fyStart = now.getMonth() >= 3
+    ? new Date(now.getFullYear(), 3, 1)
+    : new Date(now.getFullYear() - 1, 3, 1);
+  document.getElementById('filter_from').value = fyStart.toISOString().split('T')[0];
+  document.getElementById('filter_to').value = now.toISOString().split('T')[0];
+
+  // Fetch data
+  const [
+    { data: customerData },
+    { data: ledger },
+    { data: orders },
+    { data: orderItems },
+  ] = await Promise.all([
+    db.from('customers').select('*').eq('id', customerId).single(),
+    db.from('credit_ledger').select('*').eq('customer_id', customerId).order('created_at', { ascending: true }),
+    db.from('orders').select('*').eq('customer_id', customerId).order('created_at', { ascending: true }),
+    db.from('order_items').select('*'),
+  ]);
+
+  customer = customerData;
+
+  // Fill party details
+  document.getElementById('party_name').textContent = customer?.name || 'Unknown';
+  document.getElementById('party_detail').innerHTML =
+    `📞 ${customer?.phone || '—'}<br>
+     📍 ${customer?.address || '—'}<br>
+     ${customer?.gst_number ? `GSTIN: ${customer.gst_number}` : 'No GSTIN'}`;
+
+  // Build rows from ledger
+  let runningBalance = 0;
+  allRows = (ledger || []).map((entry, i) => {
+    const isDebit = entry.type === 'debit';
+    if (isDebit) runningBalance += entry.amount;
+    else runningBalance -= entry.amount;
+
+    // Find linked order
+    const order = entry.order_id ? (orders || []).find(o => o.id === entry.order_id) : null;
+    const items = order ? (orderItems || []).filter(i => i.order_id === order.id) : [];
+    const itemDesc = items.length > 0
+      ? items.map(i => (i.product_name || '') + ' x' + i.quantity).join(', ')
+      : (entry.note || 'Manual entry');
+
+    // Determine txn type
+    let txnType = 'Manual';
+    let txnBadge = 'badge-debit';
+    let statusText = '—';
+    let statusClass = '';
+    let rowClass = '';
+
+    if (entry.order_id && isDebit) {
+      txnType = 'Sale';
+      txnBadge = 'badge-sale';
+      rowClass = 'row-sale';
+      // Payment status
+      const totalPaid = (ledger || [])
+        .filter(l => l.order_id === entry.order_id && l.type === 'credit')
+        .reduce((s, l) => s + l.amount, 0);
+      if (totalPaid >= entry.amount) { statusText = 'Paid'; statusClass = 'status-paid'; }
+      else if (totalPaid > 0) { statusText = 'Partial'; statusClass = 'status-partial'; }
+      else { statusText = 'Unpaid'; statusClass = 'status-unpaid'; }
+    } else if (!isDebit) {
+      txnType = 'Payment';
+      txnBadge = 'badge-payment';
+      rowClass = 'row-payment';
+      statusText = 'Received';
+      statusClass = 'status-paid';
+    } else {
+      txnType = 'Debit';
+      txnBadge = 'badge-debit';
+      rowClass = 'row-debit';
+    }
+
+    const refNo = entry.order_id
+      ? '#' + entry.order_id.substring(0, 8).toUpperCase()
+      : 'Manual';
+
+    return {
+      date: entry.created_at,
+      txnType, txnBadge, refNo, itemDesc,
+      statusText, statusClass, rowClass,
+      debit: isDebit ? entry.amount : 0,
+      credit: !isDebit ? entry.amount : 0,
+      runningBalance,
+      paymentMethod: order?.payment_method || '',
+    };
+  });
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('statement_page').style.display = 'block';
+
+  applyFilters();
+}
+
+function applyFilters() {
+  const from = document.getElementById('filter_from').value;
+  const to = document.getElementById('filter_to').value;
+
+  const filtered = allRows.filter(r => {
+    const d = r.date.split('T')[0];
+    return (!from || d >= from) && (!to || d <= to);
+  });
+
+  renderTable(filtered, from, to);
+}
+
+function renderTable(rows, from, to) {
+  const tbody = document.getElementById('stmt_body');
+  const tfoot = document.getElementById('stmt_foot');
+
+  // Date range label
+  const fromLabel = from ? new Date(from).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Beginning';
+  const toLabel = to ? new Date(to).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+  document.getElementById('stmt_date_range').textContent = `${fromLabel} to ${toLabel}`;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" class="no-data">No transactions in this period</td></tr>';
+    tfoot.innerHTML = '';
+    updateSummary([], 0);
+    return;
+  }
+
+  // Recalc running balance for filtered view
+  let runBal = 0;
+  tbody.innerHTML = rows.map((r, i) => {
+    if (r.debit > 0) runBal += r.debit;
+    else runBal -= r.credit;
+    const balColor = runBal > 0 ? '#dc2626' : '#15803d';
+    const receivableBal = Math.max(0, runBal);
+    return `<tr class="${r.rowClass}">
+      <td class="center" style="color:#aaa;font-size:10px;">${i + 1}</td>
+      <td style="white-space:nowrap;font-size:10px;color:#666;">${fmtDate(r.date)}</td>
+      <td><span class="txn-badge ${r.txnBadge}">${r.txnType}</span></td>
+      <td style="font-family:monospace;font-size:10px;color:#2563eb;">${r.refNo}</td>
+      <td style="font-size:10px;color:#555;max-width:200px;word-break:break-word;">${r.itemDesc}${r.paymentMethod ? `<br><span style="color:#aaa;font-size:9px;">via ${r.paymentMethod}</span>` : ''}</td>
+      <td class="center"><span class="status-badge ${r.statusClass}">${r.statusText}</span></td>
+      <td class="right" style="font-weight:600;color:#dc2626;">${r.debit > 0 ? fmt(r.debit) : '—'}</td>
+      <td class="right" style="font-weight:600;color:#15803d;">${r.credit > 0 ? fmt(r.credit) : '—'}</td>
+      <td class="right" style="font-weight:700;color:${balColor};">${fmt(Math.abs(runBal))} <span style="font-size:9px;font-weight:400;color:#aaa;">${runBal > 0 ? 'Dr' : 'Cr'}</span></td>
+      <td class="right" style="font-weight:700;color:#dc2626;">${receivableBal > 0 ? fmt(receivableBal) : '<span style="color:#15803d;">Settled ✅</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  // Footer totals
+  const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+  const closing = totalDebit - totalCredit;
+  tfoot.innerHTML = `<tr>
+    <td colspan="6" style="text-align:right;padding-right:12px;">Closing Balance</td>
+    <td class="right">${fmt(totalDebit)}</td>
+    <td class="right">${fmt(totalCredit)}</td>
+    <td class="right">${fmt(Math.abs(closing))} <span style="font-size:9px;font-weight:400;opacity:0.7;">${closing > 0 ? 'Dr' : 'Cr'}</span></td>
+    <td class="right">${closing > 0 ? fmt(closing) : '—'}</td>
+  </tr>`;
+
+  updateSummary(rows, closing);
+}
+
+function updateSummary(rows, closing) {
+  const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
+  const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+  const salesCount = rows.filter(r => r.txnType === 'Sale').length;
+
+  document.getElementById('summary_orders').textContent = salesCount;
+  document.getElementById('summary_billed').textContent = fmtShort(totalDebit);
+  document.getElementById('summary_received').textContent = fmtShort(totalCredit);
+  document.getElementById('summary_balance').textContent = fmtShort(Math.max(0, closing));
+
+  document.getElementById('card_sales').textContent = fmtShort(totalDebit);
+  document.getElementById('card_received').textContent = fmtShort(totalCredit);
+  document.getElementById('card_outstanding').textContent = fmtShort(Math.max(0, closing));
+  document.getElementById('card_txns').textContent = rows.length;
+}
+
+window.addEventListener('DOMContentLoaded', loadStatement);
+</script>
+</body>
+</html>
