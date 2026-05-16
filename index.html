@@ -555,19 +555,18 @@ async function showAdminTab_DISABLED(tab) {
           const s = getCategoryStyle(p.category);
           return `
           <div class="bg-white rounded-xl shadow p-4 admin-product-card" data-name="${p.name.toLowerCase()}" data-company="${(p.company_name||'').toLowerCase()}">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-3">
-                ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl">${s.icon}</div>`}
-                <div>
-                  <div class="font-bold">${p.name}</div>
-                  <div class="text-sm text-gray-500">${p.category}${p.hsn_code ? ' · HSN: ' + p.hsn_code : ''}</div>
-                </div>
+            <div class="flex items-center gap-3 mb-3">
+              ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl flex-shrink-0">${s.icon}</div>`}
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 break-words">${p.name}</div>
+                <div class="text-xs text-gray-500">${p.category}${p.hsn_code ? ' · HSN: ' + p.hsn_code : ''}</div>
+                ${p.company_name ? `<div class="text-xs text-green-600">${p.company_name}</div>` : ''}
               </div>
-              <div class="flex items-center gap-2">
-                <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600">✏️ Edit</button>
-                <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs ${p.is_available ? 'text-orange-400 hover:text-orange-600' : 'text-green-500 hover:text-green-700'}">${p.is_available ? '🚫 Mark Unavailable' : '✅ Mark Available'}</button>
-                <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
-              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="editProduct('${p.id}')" class="bg-blue-50 text-blue-600 text-xs py-1.5 rounded-lg font-medium">✏️ Edit</button>
+              <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs py-1.5 rounded-lg font-medium ${p.is_available ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-600'}">${p.is_available ? '🚫 Unavail' : '✅ Avail'}</button>
+              <button onclick="deleteProduct('${p.id}')" class="bg-red-50 text-red-500 text-xs py-1.5 rounded-lg font-medium">🗑 Delete</button>
             </div>
             <div class="mt-2 space-y-1">
               ${(p.product_variants || []).map(v => `
@@ -3079,19 +3078,18 @@ async function showAdminTab(tab) {
           const s = getCategoryStyle(p.category);
           return `
           <div class="bg-white rounded-xl shadow p-4 admin-product-card" data-name="${p.name.toLowerCase()}" data-company="${(p.company_name||'').toLowerCase()}">
-            <div class="flex justify-between items-center">
-              <div class="flex items-center gap-3">
-                ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl">${s.icon}</div>`}
-                <div>
-                  <div class="font-bold">${p.name}</div>
-                  <div class="text-sm text-gray-500">${p.category}${p.hsn_code ? ' · HSN: ' + p.hsn_code : ''}</div>
-                </div>
+            <div class="flex items-center gap-3 mb-3">
+              ${p.image_url ? `<img src="${p.image_url}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0" />` : `<div class="w-12 h-12 ${s.bg} rounded-lg flex items-center justify-center text-xl flex-shrink-0">${s.icon}</div>`}
+              <div class="min-w-0">
+                <div class="font-bold text-gray-800 break-words">${p.name}</div>
+                <div class="text-xs text-gray-500">${p.category}${p.hsn_code ? ' · HSN: ' + p.hsn_code : ''}</div>
+                ${p.company_name ? `<div class="text-xs text-green-600">${p.company_name}</div>` : ''}
               </div>
-              <div class="flex items-center gap-2">
-                <button onclick="editProduct('${p.id}')" class="text-blue-400 text-xs hover:text-blue-600">✏️ Edit</button>
-                <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs ${p.is_available ? 'text-orange-400 hover:text-orange-600' : 'text-green-500 hover:text-green-700'}">${p.is_available ? '🚫 Mark Unavailable' : '✅ Mark Available'}</button>
-                <button onclick="deleteProduct('${p.id}')" class="text-red-400 text-xs hover:text-red-600">🗑 Delete</button>
-              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <button onclick="editProduct('${p.id}')" class="bg-blue-50 text-blue-600 text-xs py-1.5 rounded-lg font-medium">✏️ Edit</button>
+              <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs py-1.5 rounded-lg font-medium ${p.is_available ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-600'}">${p.is_available ? '🚫 Unavail' : '✅ Avail'}</button>
+              <button onclick="deleteProduct('${p.id}')" class="bg-red-50 text-red-500 text-xs py-1.5 rounded-lg font-medium">🗑 Delete</button>
             </div>
             <div class="mt-2 space-y-1">
               ${(p.product_variants || []).map(v => `
