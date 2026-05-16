@@ -1147,7 +1147,10 @@ async function recordPayment(customerId, customerName, balance) {
   const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
   const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
   await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'in', amount: parseFloat(amount), running_balance: currentBal + parseFloat(amount), reference_type: 'customer_payment', note: 'Payment from ' + customerName });
-  alert('Payment of ₹' + amount + ' recorded and added to ' + paidVia + '! ✅');
+  alert('Payment of ₹' + amount + ' recorded! ✅');
+  if (confirm('Print payment receipt?')) {
+    window.open('payment-receipt.html?customer_id=' + customerId + '&amount=' + amount + '&note=' + encodeURIComponent(note) + '&via=' + paidVia, '_blank');
+  }
   await refreshCreditSummaryCard(customerId);
   await refreshCreditDetail(customerId);
 }
