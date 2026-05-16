@@ -3245,7 +3245,33 @@ async function showAdminTab(tab) {
   }
 }
 
-function setPLRange(which) {
+function filterCreditCards() {
+  const search = (document.getElementById('credit_search')?.value || '').toLowerCase();
+  const cards = document.querySelectorAll('#credit_cards_list .bg-white');
+  cards.forEach(card => {
+    const text = card.innerText.toLowerCase();
+    card.style.display = text.includes(search) ? 'block' : 'none';
+  });
+}
+
+async function shareWhatsAppDailySummary() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const fromDT = todayStr + 'T00:00:00+05:30';
+  const toDT = todayStr + 'T23:59:59+05:30';
+  const { data: orders } = await db.from('orders').select('total_amount, payment_method, customers(name)').gte('created_at', fromDT).lte('created_at', toDT);
+  const { data: expenses } = await db.from('expenses').select('amount, category').eq('expense_date', todayStr);
+  const totalSales = (orders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalExp = (expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+  const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+  const dateLabel = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const orderLines = (orders || []).map(o => `  • ${o.customers?.name || 'Customer'}: ${fmt(o.total_amount)} (${o.payment_method})`).join('\n');
+  const msg = `*PVR Agro — Daily Summary*\n📅 ${dateLabel}\n\n💰 *Total Sales: ${fmt(totalSales)}*\n📦 Orders: ${(orders||[]).length}\n${orderLines}\n\n💸 Expenses: ${fmt(totalExp)}\n📊 Net: ${fmt(totalSales - totalExp)}\n\n_P.V.R Agrochemicals, Hyderabad_\n📞 9573711019`;
+  const encoded = encodeURIComponent(msg);
+  window.open('https://wa.me/919573711019?text=' + encoded, '_blank');
+}
+
+function setPLRange
   const now = new Date();
   let from, to;
   if (which === 'this') {
