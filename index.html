@@ -1450,6 +1450,7 @@ async function saveNewProduct() {
 async function editProduct(productId) {
   const product = state.adminProducts?.find(p => p.id === productId);
   if (!product) return;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   const { data: suppliers } = await db.from('suppliers').select('name').order('name');
   const supplierOptions = (suppliers || []).map(s => `<option value="${s.name}" ${product.company_name === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
   const isOther = !(suppliers || []).find(s => s.name === product.company_name);
