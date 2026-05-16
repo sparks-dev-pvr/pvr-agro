@@ -790,20 +790,82 @@ async function showAdminTab_DISABLED(tab) {
         </div>
         <button onclick="saveTransfer()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Transfer</button>
       </div>
+      <!-- Monthly Summary -->
+      <div class="bg-white rounded-xl shadow p-4 mb-4">
+        <div class="font-bold text-gray-700 mb-3">📊 This Month Summary</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-green-50 rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-400">💵 Cash In</div>
+            <div class="font-bold text-green-600">₹${(()=>{const now=new Date();const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString();const cashIn=(ledger||[]).filter(l=>l.account_type==='cash'&&l.entry_type==='in'&&l.created_at>=from).reduce((s,l)=>s+l.amount,0);return cashIn.toLocaleString('en-IN');})()}</div>
+          </div>
+          <div class="bg-red-50 rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-400">💵 Cash Out</div>
+            <div class="font-bold text-red-500">₹${(()=>{const now=new Date();const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString();const cashOut=(ledger||[]).filter(l=>l.account_type==='cash'&&l.entry_type==='out'&&l.created_at>=from).reduce((s,l)=>s+l.amount,0);return cashOut.toLocaleString('en-IN');})()}</div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-400">🏦 Bank In</div>
+            <div class="font-bold text-blue-600">₹${(()=>{const now=new Date();const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString();const bankIn=(ledger||[]).filter(l=>l.account_type==='bank'&&l.entry_type==='in'&&l.created_at>=from).reduce((s,l)=>s+l.amount,0);return bankIn.toLocaleString('en-IN');})()}</div>
+          </div>
+          <div class="bg-orange-50 rounded-xl p-3 text-center">
+            <div class="text-xs text-gray-400">🏦 Bank Out</div>
+            <div class="font-bold text-orange-500">₹${(()=>{const now=new Date();const from=new Date(now.getFullYear(),now.getMonth(),1).toISOString();const bankOut=(ledger||[]).filter(l=>l.account_type==='bank'&&l.entry_type==='out'&&l.created_at>=from).reduce((s,l)=>s+l.amount,0);return bankOut.toLocaleString('en-IN');})()}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ledger History -->
       <div class="space-y-3">
         <div class="font-bold text-gray-700">📒 Ledger History</div>
-        ${(ledger||[]).map(l => `
-          <div class="bg-white rounded-xl shadow p-3 flex justify-between items-center">
-            <div>
-              <div class="font-medium text-sm">${l.account_type === 'cash' ? '💵 Cash' : '🏦 Bank'} · ${l.entry_type === 'in' ? '➕' : '➖'} ₹${(l.amount||0).toLocaleString('en-IN')}</div>
-              <div class="text-xs text-gray-400">${l.note || ''} · ${new Date(l.created_at).toLocaleDateString('en-IN')}</div>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow p-3 space-y-2">
+          <input id="cb_search" type="text" placeholder="Search by note..." oninput="filterLedger()" class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" />
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="text-xs text-gray-400 mb-0.5 block">Account</label>
+              <select id="cb_filter_account" onchange="filterLedger()" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+                <option value="">All</option>
+                <option value="cash">💵 Cash</option>
+                <option value="bank">🏦 Bank</option>
+              </select>
             </div>
-            <div class="text-right">
-              <div class="text-sm font-bold ${l.entry_type==='in'?'text-green-600':'text-red-500'}">${l.entry_type==='in'?'+':'-'}₹${(l.amount||0).toLocaleString('en-IN')}</div>
-              <div class="text-xs text-gray-400">Bal: ₹${(l.running_balance||0).toLocaleString('en-IN')}</div>
-              <button onclick="deleteCashBankEntry('${l.id}')" class="text-red-400 text-xs">X</button>
+            <div><label class="text-xs text-gray-400 mb-0.5 block">Type</label>
+              <select id="cb_filter_type" onchange="filterLedger()" class="w-full border rounded-lg px-2 py-1.5 text-sm">
+                <option value="">All</option>
+                <option value="in">➕ Money In</option>
+                <option value="out">➖ Money Out</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="text-xs text-gray-400 mb-0.5 block">From Date</label>
+              <input id="cb_filter_from" type="date" onchange="filterLedger()" class="w-full border rounded-lg px-2 py-1.5 text-sm" /></div>
+            <div><label class="text-xs text-gray-400 mb-0.5 block">To Date</label>
+              <input id="cb_filter_to" type="date" onchange="filterLedger()" class="w-full border rounded-lg px-2 py-1.5 text-sm" /></div>
+          </div>
+          <button onclick="document.getElementById('cb_search').value=''; document.getElementById('cb_filter_account').value=''; document.getElementById('cb_filter_type').value=''; document.getElementById('cb_filter_from').value=''; document.getElementById('cb_filter_to').value=''; filterLedger();" class="text-xs text-gray-400 underline">Clear Filters</button>
+        </div>
+
+        <div id="cb_ledger_list">
+          ${(ledger||[]).map(l => `
+          <div class="bg-white rounded-xl shadow p-3 ledger-entry"
+            data-account="${l.account_type}"
+            data-type="${l.entry_type}"
+            data-note="${(l.note||'').toLowerCase()}"
+            data-date="${new Date(l.created_at).toISOString().split('T')[0]}">
+            <div class="flex justify-between items-start">
+              <div class="flex-1">
+                <div class="font-medium text-sm">${l.account_type === 'cash' ? '💵 Cash' : '🏦 Bank'} · ${l.entry_type === 'in' ? '➕ In' : '➖ Out'}</div>
+                <div class="text-xs text-gray-400 mt-0.5">${l.note || '—'}</div>
+                <div class="text-xs text-gray-300">${new Date(l.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})}</div>
+              </div>
+              <div class="text-right ml-2">
+                <div class="text-sm font-bold ${l.entry_type==='in'?'text-green-600':'text-red-500'}">${l.entry_type==='in'?'+':'-'}₹${(l.amount||0).toLocaleString('en-IN')}</div>
+                <div class="text-xs text-gray-400">Bal: ₹${(l.running_balance||0).toLocaleString('en-IN')}</div>
+                <button onclick="confirmDeleteCashBank('${l.id}')" class="mt-1 text-xs bg-red-50 text-red-400 px-2 py-0.5 rounded-lg border border-red-100">🗑 Delete</button>
+              </div>
             </div>
           </div>`).join('')}
+        </div>
       </div>`;
     return;
 
