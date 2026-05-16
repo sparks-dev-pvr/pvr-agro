@@ -880,6 +880,7 @@ function renderOrdersTab(activeStatus) {
           <button onclick="shareWhatsApp('${o.customers?.phone||''}','${o.customers?.name||'Customer'}',${o.total_amount})" class="block mt-1 text-xs bg-[#25D366] text-white px-2 py-0.5 rounded w-full">📲 WhatsApp</button>
           <button onclick="deleteOrder('${o.id}')" class="block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded w-full">🗑 Delete</button>
           <button onclick="showAddItemsToOrder('${o.id}')" class="block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded w-full">➕ Items</button>
+          <button onclick="navigator.clipboard.writeText('${o.id.substring(0,8).toUpperCase()}'); alert('Order ID copied! ✅')" class="block mt-1 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded w-full">📋 Copy ID</button>
         </div>
       </div>
       <div class="text-sm text-gray-600 border-t pt-2">
