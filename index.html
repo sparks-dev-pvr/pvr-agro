@@ -2312,7 +2312,7 @@ async function showAgingReport(forceRefresh) {
   window._agingForceRefresh = false;
   panel.innerHTML = '<div class="text-gray-400 text-sm text-center py-2">Loading...</div>';
   const { data: credits } = await db.from('credit_summary').select('*');
-  const { data: orders } = await db.from('orders').select('*').eq('payment_method', 'credit').eq('order_status', 'dispatched');
+  const { data: orders } = await db.from('orders').select('*').eq('payment_method', 'credit');
   const { data: agingOverrides } = await db.from('customer_aging_override').select('*');
   const today = new Date();
   const aging = (credits || []).filter(c => c.balance > 0).map(c => {
