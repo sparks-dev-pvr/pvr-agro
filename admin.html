@@ -420,45 +420,30 @@ function renderAdminLogin() {
 
 function renderAdmin() {
   return `
-  <div class="min-h-screen bg-gray-100 pb-20">
+  <div class="min-h-screen bg-gray-100">
     <nav class="bg-green-700 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50 shadow">
       <div class="flex items-center gap-2 font-bold text-base">
         <img src="${LOGO_URL}" class="h-8 w-8 rounded-full object-cover border border-white" />
         <span>PVR Admin</span>
       </div>
-      <button onclick="adminLogout()" class="text-red-300 text-sm font-bold">🚪 Logout</button>
+      <button onclick="toggleAdminMenu()" class="bg-green-600 px-3 py-1.5 rounded-lg text-sm font-bold">☰ Menu</button>
     </nav>
+    <div id="admin_mobile_menu" class="hidden sticky top-14 z-40 bg-green-800 text-white shadow-lg">
+      <div class="grid grid-cols-2 gap-1 p-3">
+        <button onclick="showAdminTab('orders');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">📦 Orders</button>
+        <button onclick="showAdminTab('products');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">🌿 Products</button>
+        <button onclick="showAdminTab('credit');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">💳 Credit</button>
+        <button onclick="showAdminTab('suppliers');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">🏢 Suppliers</button>
+        <button onclick="showAdminTab('purchases');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">🛒 Purchases</button>
+        <button onclick="showAdminTab('expenses');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">💸 Expenses</button>
+        <button onclick="showAdminTab('cashbank');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">🏦 Cash & Bank</button>
+        <button onclick="showAdminTab('reports');toggleAdminMenu()" class="bg-green-700 hover:bg-green-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2">📊 Reports</button>
+        <button onclick="adminLogout()" class="bg-red-700 hover:bg-red-600 rounded-xl px-3 py-3 text-sm font-medium text-left flex items-center gap-2 col-span-2">🚪 Logout</button>
+      </div>
+    </div>
     <div class="px-3 py-4">
       <div id="admin_content">Loading...</div>
     </div>
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-      <div class="grid grid-cols-8 h-16">
-        <button onclick="showAdminTab('orders')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 active:text-green-700 text-xs">
-          <span class="text-xl">📦</span><span class="text-[10px]">Orders</span>
-        </button>
-        <button onclick="showAdminTab('products')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">🌿</span><span class="text-[10px]">Products</span>
-        </button>
-        <button onclick="showAdminTab('credit')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">💳</span><span class="text-[10px]">Credit</span>
-        </button>
-        <button onclick="showAdminTab('suppliers')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">🏢</span><span class="text-[10px]">Suppliers</span>
-        </button>
-        <button onclick="showAdminTab('purchases')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">🛒</span><span class="text-[10px]">Purchases</span>
-        </button>
-        <button onclick="showAdminTab('expenses')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">💸</span><span class="text-[10px]">Expenses</span>
-        </button>
-        <button onclick="showAdminTab('cashbank')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">🏦</span><span class="text-[10px]">Cash</span>
-        </button>
-        <button onclick="showAdminTab('reports')" class="flex flex-col items-center justify-center gap-0.5 text-gray-500 hover:text-green-700 text-xs">
-          <span class="text-xl">📊</span><span class="text-[10px]">Reports</span>
-        </button>
-      </div>
-    </nav>
   </div>`;
 }
 
