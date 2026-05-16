@@ -942,10 +942,26 @@ function renderOrdersTab(activeStatus) {
       : activeOrders.map(orderCard).join('');
   }
 
+  const todaySalesTotal = (window._allOrders || []).filter(o => new Date(o.created_at).toDateString() === new Date().toDateString()).reduce((s, o) => s + (o.total_amount || 0), 0);
+  const totalOrdersAmt = (window._allOrders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
   content.innerHTML = `
     <div class="flex justify-between items-center mb-3">
       <h2 class="text-xl font-bold">Orders</h2>
       <button onclick="showCreateManualOrder()" class="bg-green-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+ New Order</button>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="bg-green-50 rounded-xl p-2 text-center border border-green-100">
+        <div class="text-xs text-gray-400">Today</div>
+        <div class="font-bold text-green-700 text-sm">₹${todaySalesTotal.toLocaleString('en-IN')}</div>
+      </div>
+      <div class="bg-yellow-50 rounded-xl p-2 text-center border border-yellow-100">
+        <div class="text-xs text-gray-400">Pending</div>
+        <div class="font-bold text-yellow-600 text-sm">${(window._allOrders||[]).filter(o=>o.order_status==='pending').length}</div>
+      </div>
+      <div class="bg-blue-50 rounded-xl p-2 text-center border border-blue-100">
+        <div class="text-xs text-gray-400">All Time</div>
+        <div class="font-bold text-blue-600 text-sm">₹${totalOrdersAmt.toLocaleString('en-IN')}</div>
+      </div>
     </div>
     <div id="manual_order_form"></div>
     <div class="flex gap-2 mb-3">
