@@ -2908,6 +2908,7 @@ async function showAdminTab(tab) {
   const content = document.getElementById('admin_content');
   if (!content) return;
   if (tab === 'reports') { window._reportsSubTab = 'monthly'; showReportsTab('monthly'); return; }
+  if (tab === 'dashboard') { loadDashboard(); return; }
   content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
 
   if (tab === 'orders') {
