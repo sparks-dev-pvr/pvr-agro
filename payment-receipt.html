@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Payment Receipt — PVR Agro</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; background: #f0f0f0; color: #111; }
+
+#toolbar {
+  background: #15803d; color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+#toolbar h2 { font-size: 15px; font-weight: 700; flex: 1; }
+#toolbar button {
+  background: #fff; color: #15803d; border: none; padding: 7px 16px;
+  border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
+#toolbar button.secondary { background: rgba(255,255,255,0.2); color: #fff; }
+
+#receipt_wrap { max-width: 680px; margin: 24px auto; padding: 0 12px 40px; }
+
+#receipt_page {
+  background: #fff;
+  border: 1px solid #aaa;
+}
+
+/* WATERMARK */
+.paid-stamp {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg);
+  font-size: 72px; font-weight: 900; color: rgba(21,128,61,0.07);
+  letter-spacing: 4px; pointer-events: none; white-space: nowrap;
+  z-index: 0;
+}
+
+.receipt-inner { position: relative; }
+
+/* HEADER */
+.receipt-header {
+  background: #15803d; color: #fff;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px;
+}
+.header-left { }
+.company-name-r { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+.company-sub-r { font-size: 10px; opacity: 0.8; margin-top: 2px; line-height: 1.5; }
+.header-right { text-align: right; }
+.receipt-title { font-size: 20px; font-weight: 900; letter-spacing: 2px; opacity: 0.9; }
+.receipt-no { font-size: 11px; opacity: 0.8; margin-top: 4px; }
+
+/* GREEN STRIPE */
+.green-stripe { height: 4px; background: linear-gradient(90deg, #15803d, #22c55e, #15803d); }
+
+/* AMOUNT HERO */
+.amount-hero {
+  text-align: center; padding: 24px 20px 20px;
+  border-bottom: 1px solid #e5e5e5; position: relative;
+}
+.amount-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.amount-big { font-size: 44px; font-weight: 900; color: #15803d; line-height: 1; }
+.amount-words { font-size: 11px; color: #666; margin-top: 6px; font-style: italic; }
+.paid-circle {
+  display: inline-block; border: 3px solid #15803d; border-radius: 50%;
+  width: 52px; height: 52px; line-height: 46px; text-align: center;
+  font-size: 11px; font-weight: 800; color: #15803d; letter-spacing: 1px;
+  margin-top: 10px;
+}
+
+/* DETAILS GRID */
+.details-section { padding: 16px 20px; }
+.details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.detail-item {
+  padding: 8px 12px; border-bottom: 1px solid #f0f0f0; border-right: 1px solid #f0f0f0;
+}
+.detail-item:nth-child(even) { border-right: none; }
+.detail-label { font-size: 9px; text-transform: uppercase; color: #aaa; letter-spacing: 0.5px; margin-bottom: 3px; }
+.detail-value { font-size: 12px; font-weight: 700; color: #222; }
+.detail-value.green { color: #15803d; }
+.detail-value.red { color: #dc2626; }
+.detail-value.blue { color: #2563eb; }
+
+/* PARTY SECTION */
+.party-section {
+  margin: 0 20px 16px; padding: 12px;
+  background: #f9fef9; border: 1px solid #d1fae5; border-radius: 8px;
+}
+.party-section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.8px; margin-bottom: 6px; }
+.party-name-r { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.party-sub-r { font-size: 10px; color: #666; line-height: 1.6; }
+
+/* LEDGER MINI */
+.ledger-mini { margin: 0 20px 16px; }
+.ledger-mini-title { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #888; letter-spacing: 0.8px; margin-bottom: 6px; }
+.ledger-mini table { width: 100%; border-collapse: collapse; }
+.ledger-mini th { font-size: 9px; color: #888; text-align: left; padding: 4px 6px; border-bottom: 1px solid #e5e5e5; }
+.ledger-mini th.right { text-align: right; }
+.ledger-mini td { font-size: 10px; padding: 4px 6px; border-bottom: 1px solid #f5f5f5; }
+.ledger-mini td.right { text-align: right; font-weight: 600; }
+.ledger-mini .closing-row td { font-weight: 700; background: #f9f9f9; font-size: 11px; }
+
+/* NOTE */
+.receipt-note {
+  margin: 0 20px 16px; padding: 10px 12px;
+  background: #fffbeb; border-left: 3px solid #f59e0b; border-radius: 4px;
+}
+.receipt-note-label { font-size: 9px; font-weight: 700; color: #92400e; text-transform: uppercase; margin-bottom: 3px; }
+.receipt-note-text { font-size: 11px; color: #78350f; }
+
+/* FOOTER */
+.receipt-footer {
+  border-top: 1px solid #e5e5e5; padding: 12px 20px;
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+.footer-bank { font-size: 10px; color: #666; line-height: 1.7; }
+.footer-bank strong { color: #333; display: block; margin-bottom: 2px; }
+.footer-sig { text-align: right; }
+.sig-line-r { border-top: 1px solid #333; margin-top: 28px; padding-top: 4px; font-size: 10px; font-weight: 700; display: inline-block; min-width: 110px; }
+.footer-note-small { text-align: center; padding: 8px; font-size: 9px; color: #bbb; border-top: 1px solid #f0f0f0; }
+
+/* EDITABLE */
+.ef {
+  border: none; outline: none; background: transparent;
+  font-family: Arial, sans-serif; color: #111; width: 100%;
+}
+.ef:focus { background: #fffbdd; border-radius: 2px; }
+
+@media print {
+  body { background: #fff; }
+  #toolbar { display: none !important; }
+  #receipt_wrap { margin: 0; padding: 0; max-width: 100%; }
+  #receipt_page { border: none; }
+  .ef:focus { background: transparent; }
+}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h2>🧾 Payment Receipt — PVR Agro</h2>
+  <button class="secondary" onclick="window.close()">✕ Close</button>
+  <button onclick="window.print()">🖨️ Print / Save PDF</button>
+</div>
+
+<div id="receipt_wrap">
+  <div id="loading" style="text-align:center;padding:60px;font-size:14px;color:#15803d;">⏳ Loading receipt...</div>
+  <div id="receipt_page" style="display:none">
+  <div class="receipt-inner">
+    <div class="paid-stamp">RECEIVED</div>
+
+    <!-- HEADER -->
+    <div class="receipt-header">
+      <div class="header-left">
+        <div class="company-name-r">P.V.R AGROCHEMICALS</div>
+        <div class="company-sub-r">
+          Autonagar, Hayathnagar, Hyderabad - 500070<br>
+          Ph: 9573711019 | GSTIN: 36AJRPR1684F1ZP
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="receipt-title">RECEIPT</div>
+        <div class="receipt-no">No. <span id="receipt_no">—</span></div>
+      </div>
+    </div>
+    <div class="green-stripe"></div>
+
+    <!-- AMOUNT HERO -->
+    <div class="amount-hero">
+      <div class="amount-label">Amount Received</div>
+      <div class="amount-big" id="amount_display">₹0</div>
+      <div class="amount-words" id="amount_words_display">Zero Rupees Only</div>
+      <div class="paid-circle">PAID</div>
+    </div>
+
+    <!-- DETAILS GRID -->
+    <div class="details-section">
+      <div class="details-grid">
+        <div class="detail-item">
+          <div class="detail-label">Receipt Date</div>
+          <div class="detail-value"><input class="ef" id="receipt_date" type="date" /></div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Payment Mode</div>
+          <div class="detail-value green"><input class="ef" id="payment_mode" value="Cash" /></div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Amount Received</div>
+          <div class="detail-value green" id="amount_detail">₹0.00</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Reference / Cheque No.</div>
+          <div class="detail-value"><input class="ef" id="ref_no" placeholder="Optional" /></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTY -->
+    <div class="party-section">
+      <div class="party-section-title">Received From</div>
+      <div class="party-name-r" id="party_name_r">—</div>
+      <div class="party-sub-r" id="party_sub_r">—</div>
+    </div>
+
+    <!-- LEDGER MINI -->
+    <div class="ledger-mini">
+      <div class="ledger-mini-title">Account Summary</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="right">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="ledger_mini_body"></tbody>
+      </table>
+    </div>
+
+    <!-- NOTE -->
+    <div class="receipt-note" id="note_section" style="display:none">
+      <div class="receipt-note-label">Note</div>
+      <div class="receipt-note-text" id="note_text">—</div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="receipt-footer">
+      <div class="footer-bank">
+        <strong>Bank Details</strong>
+        State Bank of India, Hayatnagar<br>
+        A/C: 39550894944 | IFSC: SBIN0011080
+      </div>
+      <div class="footer-sig">
+        <div style="font-size:10px;color:#555;">For: P.V.R AGROCHEMICALS</div>
+        <div class="sig-line-r">Authorized Signatory</div>
+      </div>
+    </div>
+    <div class="footer-note-small">This is a computer generated receipt — PVR Agro | pvragrochyd@gmail.com</div>
+
+  </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlwZGphanVoZnFtdXV6amVqbHduIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDY2ODcsImV4cCI6MjA5MzYyMjY4N30.Y1w43s7vx2V_XkgYvSUB0xTIsnGGFWyCU09z_r_otEg';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const fmt = n => '₹' + (n||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtShort = n => '₹' + (n||0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+function numberToWords(num) {
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  num = Math.round(num);
+  if(num===0)return'Zero';
+  if(num<20)return ones[num];
+  if(num<100)return tens[Math.floor(num/10)]+(num%10?' '+ones[num%10]:'');
+  if(num<1000)return ones[Math.floor(num/100)]+' Hundred'+(num%100?' '+numberToWords(num%100):'');
+  if(num<100000)return numberToWords(Math.floor(num/1000))+' Thousand'+(num%1000?' '+numberToWords(num%1000):'');
+  if(num<10000000)return numberToWords(Math.floor(num/100000))+' Lakh'+(num%100000?' '+numberToWords(num%100000):'');
+  return numberToWords(Math.floor(num/10000000))+' Crore'+(num%10000000?' '+numberToWords(num%10000000):'');
+}
+
+async function loadReceipt() {
+  const params = new URLSearchParams(window.location.search);
+  const customerId = params.get('customer_id');
+  const amount = parseFloat(params.get('amount')) || 0;
+  const note = params.get('note') || '';
+  const via = params.get('via') || 'Cash';
+
+  // Set date
+  document.getElementById('receipt_date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('payment_mode').value = via.charAt(0).toUpperCase() + via.slice(1);
+
+  // Receipt number
+  const counter = parseInt(localStorage.getItem('receipt_counter') || '0') + 1;
+  localStorage.setItem('receipt_counter', counter.toString());
+  const year = new Date().getFullYear().toString().slice(-2);
+  document.getElementById('receipt_no').textContent = 'RCP-' + year + '-' + counter;
+
+  // Amount display
+  document.getElementById('amount_display').textContent = fmtShort(amount);
+  document.getElementById('amount_detail').textContent = fmt(amount);
+  document.getElementById('amount_words_display').textContent = numberToWords(amount) + ' Rupees Only';
+
+  // Note
+  if (note) {
+    document.getElementById('note_section').style.display = 'block';
+    document.getElementById('note_text').textContent = note;
+  }
+
+  if (!customerId) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('receipt_page').style.display = 'block';
+    document.getElementById('party_name_r').textContent = 'Walk-in Customer';
+    document.getElementById('ledger_mini_body').innerHTML = `
+      <tr><td>Payment Received</td><td class="right" style="color:#15803d;">${fmt(amount)}</td></tr>
+      <tr class="closing-row"><td>Amount Received</td><td class="right" style="color:#15803d;">${fmt(amount)}</td></tr>`;
+    return;
+  }
+
+  const [
+    { data: customer },
+    { data: ledger },
+  ] = await Promise.all([
+    db.from('customers').select('*').eq('id', customerId).single(),
+    db.from('credit_ledger').select('*').eq('customer_id', customerId).order('created_at', { ascending: true }),
+  ]);
+
+  // Party details
+  document.getElementById('party_name_r').textContent = customer?.name || 'Unknown';
+  document.getElementById('party_sub_r').innerHTML =
+    `📞 ${customer?.phone || '—'} &nbsp;|&nbsp; 📍 ${customer?.address || '—'}${customer?.gst_number ? '<br>GSTIN: ' + customer.gst_number : ''}`;
+
+  // Build ledger summary
+  let totalBilled = 0, totalPaidBefore = 0;
+  (ledger || []).forEach(e => {
+    if (e.type === 'debit') totalBilled += e.amount;
+    else totalPaidBefore += e.amount;
+  });
+  const previousBalance = totalBilled - totalPaidBefore + amount; // before this payment
+  const closingBalance = previousBalance - amount;
+
+  document.getElementById('ledger_mini_body').innerHTML = `
+    <tr><td>Total Billed (All Time)</td><td class="right">${fmt(totalBilled)}</td></tr>
+    <tr><td>Previously Received</td><td class="right" style="color:#15803d;">${fmt(totalPaidBefore - amount)}</td></tr>
+    <tr><td style="color:#888;">Outstanding Before This Payment</td><td class="right" style="color:#dc2626;">${fmt(previousBalance)}</td></tr>
+    <tr><td style="color:#15803d;font-weight:700;">Payment Received Now</td><td class="right" style="color:#15803d;font-weight:700;">${fmt(amount)}</td></tr>
+    <tr class="closing-row"><td>Closing Balance</td><td class="right" style="color:${closingBalance > 0 ? '#dc2626' : '#15803d'};">${fmt(Math.abs(closingBalance))} ${closingBalance > 0 ? 'Dr' : 'Cr'}</td></tr>`;
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('receipt_page').style.display = 'block';
+}
+
+window.addEventListener('DOMContentLoaded', loadReceipt);
+</script>
+</body>
+</html>
