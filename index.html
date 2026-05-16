@@ -522,6 +522,9 @@ async function showAdminTab_DISABLED(tab) {
     const { data: items } = await db.from('order_items').select('*');
     window._allOrders = orders || [];
     window._allItems = items || [];
+    const pendingCount = (orders || []).filter(o => o.order_status === 'pending').length;
+    const badge = document.getElementById('pending_badge');
+    if (badge) badge.textContent = pendingCount > 0 ? pendingCount : '';
     renderOrdersTab('pending');
     return;
 
