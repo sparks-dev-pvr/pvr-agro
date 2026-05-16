@@ -635,10 +635,17 @@ async function showAdminTab_DISABLED(tab) {
         <h2 class="text-xl font-bold">Purchases</h2>
         <button onclick="showAddPurchase()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ New Purchase</button>
       </div>
-      <div class="flex gap-2 mb-4">
+      <div class="space-y-2 mb-4">
         <input id="purchase_search" type="text" placeholder="Search by supplier, product or bill no..."
-          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500"
           oninput="filterPurchases()" />
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500 mb-0.5 block">From Date</label>
+            <input id="purchase_from" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" onchange="filterPurchases()" /></div>
+          <div><label class="text-xs text-gray-500 mb-0.5 block">To Date</label>
+            <input id="purchase_to" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500" onchange="filterPurchases()" /></div>
+        </div>
+        <button onclick="document.getElementById('purchase_from').value=''; document.getElementById('purchase_to').value=''; document.getElementById('purchase_search').value=''; filterPurchases();" class="text-xs text-gray-400 underline">Clear Filters</button>
       </div>
       <div id="add_purchase_form"></div>
       <div class="space-y-3" id="purchases_list">
