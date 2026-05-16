@@ -4169,6 +4169,7 @@ function navigate(page) { state.page = page; render(); }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
 render();
+hideSplash();
 </script>
 </body>
 </html>
