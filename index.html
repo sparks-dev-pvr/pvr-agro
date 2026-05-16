@@ -1447,13 +1447,25 @@ async function saveNewProduct() {
   showAdminTab('products');
 }
 
-function editProduct(productId) {
+async function editProduct(productId) {
   const product = state.adminProducts?.find(p => p.id === productId);
   if (!product) return;
+  const { data: suppliers } = await db.from('suppliers').select('name').order('name');
+  const supplierOptions = (suppliers || []).map(s => `<option value="${s.name}" ${product.company_name === s.name ? 'selected' : ''}>${s.name}</option>`).join('');
+  const isOther = !(suppliers || []).find(s => s.name === product.company_name);
   const form = document.getElementById('add_product_form');
   form.innerHTML = '<div class="bg-white rounded-xl shadow p-4 mb-4"><h3 class="font-bold mb-3">Edit: ' + product.name + '</h3><input id="ep_name" value="' + product.name + '" placeholder="Product Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><select id="ep_category" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm">' +
     ['Bio-Pesticides','Pesticides','Fungicides','Seeds','Fertilizers','Herbicides','Weedicides'].map(c=>'<option '+(product.category===c?'selected':'')+'>'+c+'</option>').join('') +
-    '</select><input id="ep_company" value="' + (product.company_name||'') + '" placeholder="Company Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_chemical" value="' + (product.chemical_name||'') + '" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_desc" value="' + (product.description||'') + '" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_hsn" value="' + (product.hsn_code||'') + '" placeholder="HSN/SAC Code" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><div class="mb-3"><label class="text-sm font-medium text-gray-700">Change Image (only if replacing)</label><input id="ep_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" /></div><div class="font-semibold text-sm mb-2">Variants & Packaging</div>' +
+    `</select>
+    <label class="text-xs font-semibold text-gray-600 mb-1 block">Company Name</label>
+    <select id="ep_company_select" onchange="document.getElementById('ep_company_other').classList.toggle('hidden', this.value !== '__other__'); if(this.value !== '__other__') document.getElementById('ep_company').value=this.value;" class="w-full border rounded-lg px-3 py-2 mb-1 text-sm">
+      <option value="">-- Select Supplier --</option>
+      ${supplierOptions}
+      <option value="__other__" ${isOther ? 'selected' : ''}>✏️ Type Manually</option>
+    </select>
+    <input id="ep_company_other" value="${isOther ? (product.company_name||'') : ''}" placeholder="Type company name" class="${isOther ? '' : 'hidden'} w-full border rounded-lg px-3 py-2 mb-2 text-sm" oninput="document.getElementById('ep_company').value=this.value" />
+    <input id="ep_company" type="hidden" value="${product.company_name||''}" />` +
+    '<input id="ep_chemical" value="' + (product.chemical_name||'') + '" placeholder="Chemical Name" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_desc" value="' + (product.description||'') + '" placeholder="Description" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><input id="ep_hsn" value="' + (product.hsn_code||'') + '" placeholder="HSN/SAC Code" class="w-full border rounded-lg px-3 py-2 mb-2 text-sm" /><div class="mb-3"><label class="text-sm font-medium text-gray-700">Change Image (only if replacing)</label><input id="ep_image" type="file" accept="image/*" class="w-full border rounded-lg px-3 py-2 mt-1 text-sm" /></div><div class="font-semibold text-sm mb-2">Variants & Packaging</div>' +
     (product.product_variants||[]).map(v => '<div class="border rounded-lg p-3 mb-3 bg-gray-50"><div class="font-medium text-sm mb-2 text-gray-700">📦 ' + v.bag_size + '</div>' +
       (v.packagings||[]).map(pk => '<div class="border rounded-lg p-2 mb-2 bg-white" id="pkg_row_' + pk.id + '"><div class="grid grid-cols-2 gap-2 mb-1"><input id="pk_label_' + pk.id + '" value="' + pk.box_label + '" placeholder="Label" class="border rounded px-2 py-1 text-xs col-span-2" /><input id="pk_units_' + pk.id + '" type="number" value="' + pk.units_per_box + '" placeholder="Units/box" class="border rounded px-2 py-1 text-xs" /><input id="pk_mrp_' + pk.id + '" type="number" value="' + (pk.mrp_per_unit||'') + '" placeholder="MRP/unit" class="border rounded px-2 py-1 text-xs" /><input id="pk_price_unit_' + pk.id + '" type="number" value="' + (pk.price_per_unit||'') + '" placeholder="Price/unit" class="border rounded px-2 py-1 text-xs" /><input id="pk_price_' + pk.id + '" type="number" value="' + pk.price_per_box + '" placeholder="Price/box" class="border rounded px-2 py-1 text-xs" /><input id="pk_cost_' + pk.id + '" type="number" value="' + (pk.cost_price||0) + '" placeholder="Cost/box" class="border rounded px-2 py-1 text-xs" /><input id="pk_stock_' + pk.id + '" type="number" value="' + pk.stock_quantity + '" placeholder="Stock" class="border rounded px-2 py-1 text-xs col-span-2" /></div><button onclick="deletePkg(\'' + pk.id + '\')" class="text-red-400 text-xs">🗑 Delete</button></div>').join('') +
       '<div id="new_pkgs_' + v.id + '"></div><button onclick="addNewPkgRow(\'' + v.id + '\')" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button></div>'
