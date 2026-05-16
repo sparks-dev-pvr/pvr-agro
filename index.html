@@ -1229,7 +1229,22 @@ function addPkgRow(btn) {
 }
 
 function addVariantBlock() {
-  document.getElementById('np_variants').insertAdjacentHTML('beforeend', '<div class="variant-block border rounded-lg p-3 mb-3 bg-gray-50"><input placeholder="Size (e.g. 500ml) *" class="variant_size w-full border rounded px-2 py-1 text-sm mb-2" /><div class="font-semibold text-xs text-gray-500 mb-1">Packaging Options</div><div class="pkg-rows"><div class="pkg-row grid grid-cols-2 gap-2 mb-2"><input placeholder="Label (e.g. Box of 12) *" class="pkg_label border rounded px-2 py-1 text-xs col-span-2" /><input placeholder="Units/box" type="number" class="pkg_units border rounded px-2 py-1 text-xs" /><input placeholder="MRP/unit (₹)" type="number" class="pkg_mrp border rounded px-2 py-1 text-xs" /><input placeholder="Price/unit (₹)" type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs" /><input placeholder="Price/box (₹) *" type="number" class="pkg_price border rounded px-2 py-1 text-xs" /><input placeholder="Cost/box (₹)" type="number" class="pkg_cost border rounded px-2 py-1 text-xs" /><input placeholder="Stock (boxes)" type="number" class="pkg_stock border rounded px-2 py-1 text-xs col-span-2" /></div></div><button type="button" onclick="addPkgRow(this)" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button></div>');
+  document.getElementById('np_variants').insertAdjacentHTML('beforeend', `<div class="variant-block border rounded-lg p-3 mb-3 bg-gray-50">
+    <div><label class="text-xs font-semibold text-gray-600 mb-1 block">Size (e.g. 500ml) *</label><input class="variant_size w-full border rounded px-2 py-1 text-sm mb-2 focus:outline-none focus:border-green-500" /></div>
+    <div class="font-semibold text-xs text-gray-500 mb-2">Packaging Options</div>
+    <div class="pkg-rows">
+      <div class="pkg-row grid grid-cols-2 gap-2 mb-2">
+        <div class="col-span-2"><label class="text-xs text-gray-500 mb-0.5 block">Box Label *</label><input class="pkg_label border rounded px-2 py-1 text-xs w-full" /></div>
+        <div><label class="text-xs text-gray-500 mb-0.5 block">Units/box</label><input type="number" class="pkg_units border rounded px-2 py-1 text-xs w-full" /></div>
+        <div><label class="text-xs text-gray-500 mb-0.5 block">MRP/unit (₹)</label><input type="number" class="pkg_mrp border rounded px-2 py-1 text-xs w-full" /></div>
+        <div><label class="text-xs text-gray-500 mb-0.5 block">Price/unit (₹)</label><input type="number" class="pkg_price_unit border rounded px-2 py-1 text-xs w-full" /></div>
+        <div><label class="text-xs text-gray-500 mb-0.5 block">Price/box (₹) *</label><input type="number" class="pkg_price border rounded px-2 py-1 text-xs w-full" /></div>
+        <div><label class="text-xs text-gray-500 mb-0.5 block">Cost/box (₹)</label><input type="number" class="pkg_cost border rounded px-2 py-1 text-xs w-full" /></div>
+        <div class="col-span-2"><label class="text-xs text-gray-500 mb-0.5 block">Stock (boxes)</label><input type="number" class="pkg_stock border rounded px-2 py-1 text-xs w-full" /></div>
+      </div>
+    </div>
+    <button type="button" onclick="addPkgRow(this)" class="text-green-700 text-xs mt-1">+ Add Packaging Option</button>
+  </div>`);
 }
 
 async function saveNewProduct() {
