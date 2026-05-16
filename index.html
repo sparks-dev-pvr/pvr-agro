@@ -494,6 +494,7 @@ async function loadProducts() {
   }));
   state.loading = false;
   render();
+  hideSplash();
 }
 
 async function loadAdminData() { showAdminTab('orders'); }
