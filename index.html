@@ -2936,6 +2936,7 @@ async function showAdminTab(tab) {
   if (tab === 'reports') { window._reportsSubTab = 'monthly'; showReportsTab('monthly'); return; }
   if (tab === 'dashboard') { loadDashboard(); return; }
   content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
+  setTimeout(addDashboardBackBtn, 800);
 
   if (tab === 'orders') {
     const { data: orders } = await db.from('orders').select('*, customers(name, phone)').order('created_at', { ascending: false });
