@@ -860,6 +860,7 @@ function renderOrdersTab(activeStatus) {
             ${statuses.map(s => `<option value="${s}" ${o.order_status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
           </select>
           <button onclick="generateInvoice('${o.id}')" class="block mt-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded w-full">🧾 Invoice</button>
+          <button onclick="shareWhatsApp('${o.customers?.phone||''}','${o.customers?.name||'Customer'}',${o.total_amount})" class="block mt-1 text-xs bg-[#25D366] text-white px-2 py-0.5 rounded w-full">📲 WhatsApp</button>
           <button onclick="deleteOrder('${o.id}')" class="block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded w-full">🗑 Delete</button>
           <button onclick="showAddItemsToOrder('${o.id}')" class="block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded w-full">➕ Items</button>
         </div>
