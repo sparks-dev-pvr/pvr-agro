@@ -961,6 +961,17 @@ async function updateOrderStatus(orderId, status, currentTab) {
 
 async function generateInvoice(orderId) {
   window.open('invoice.html?id=' + orderId, '_blank');
+  const order = (window._allOrders || []).find(o => o.id === orderId);
+  if (order && order.customers?.phone) {
+    setTimeout(() => {
+      if (confirm('Send invoice notification via WhatsApp to ' + (order.customers?.name || 'customer') + '?')) {
+        const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
+        const msg = `Dear ${order.customers?.name || 'Customer'},\n\nYour order from *P.V.R Agrochemicals* has been processed.\n\n🧾 Order ID: #${orderId.substring(0,8).toUpperCase()}\n💰 Amount: *${fmt(order.total_amount)}*\n💳 Payment: ${order.payment_method}\n\nThank you for your business! 🌿\n📞 9573711019`;
+        const clean = (order.customers.phone || '').replace(/\D/g, '');
+        window.open('https://wa.me/91' + clean + '?text=' + encodeURIComponent(msg), '_blank');
+      }
+    }, 500);
+  }
 }
 
 function numberToWords(num) {
