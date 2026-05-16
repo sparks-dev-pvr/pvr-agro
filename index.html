@@ -2335,6 +2335,27 @@ async function saveTransfer() {
   showAdminTab('cashbank');
 }
 
+function filterLedger() {
+  const search = (document.getElementById('cb_search')?.value || '').toLowerCase();
+  const account = document.getElementById('cb_filter_account')?.value || '';
+  const type = document.getElementById('cb_filter_type')?.value || '';
+  const from = document.getElementById('cb_filter_from')?.value || '';
+  const to = document.getElementById('cb_filter_to')?.value || '';
+  document.querySelectorAll('.ledger-entry').forEach(entry => {
+    const matchSearch = !search || (entry.dataset.note || '').includes(search);
+    const matchAccount = !account || entry.dataset.account === account;
+    const matchType = !type || entry.dataset.type === type;
+    const matchFrom = !from || entry.dataset.date >= from;
+    const matchTo = !to || entry.dataset.date <= to;
+    entry.style.display = (matchSearch && matchAccount && matchType && matchFrom && matchTo) ? 'block' : 'none';
+  });
+}
+
+function confirmDeleteCashBank(entryId) {
+  if (!confirm('Delete this entry? Balances will be recalculated.')) return;
+  deleteCashBankEntry(entryId);
+}
+
 async function deleteCashBankEntry(entryId) {
   if (!confirm('Delete this entry?')) return;
   await db.from('cash_bank_ledger').delete().eq('id', entryId);
