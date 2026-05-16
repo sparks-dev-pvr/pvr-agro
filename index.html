@@ -2545,9 +2545,9 @@ async function showReportsTab(subTab) {
         <div class="font-bold mb-3 text-gray-700">📅 Monthly Report</div>
         <div class="grid grid-cols-2 gap-2 mb-3">
           <div><label class="text-xs text-gray-500">From Date</label>
-            <input type="date" id="rep_from" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+            <input type="date" id="rep_from" value="${window._autoFrom || ''}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
           <div><label class="text-xs text-gray-500">To Date</label>
-            <input type="date" id="rep_to" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
+            <input type="date" id="rep_to" value="${window._autoTo || ''}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1" /></div>
         </div>
         <div class="grid grid-cols-2 gap-2 mb-3">
           <button onclick="setMonthRange('this')" class="bg-gray-100 text-gray-700 py-2 rounded-lg text-xs font-medium">📅 This Month</button>
