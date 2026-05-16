@@ -482,6 +482,17 @@ function toggleAdminMenu() {
   if (menu) menu.classList.toggle('hidden');
 }
 
+function addDashboardBackBtn() {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  const existing = document.getElementById('dash_back_btn');
+  if (existing) existing.remove();
+  const btn = document.createElement('div');
+  btn.id = 'dash_back_btn';
+  btn.innerHTML = '<button onclick="showAdminTab(\'dashboard\')" class="text-green-700 text-sm mb-3 flex items-center gap-1 font-medium">← Dashboard</button>';
+  content.prepend(btn);
+}
+
 async function loadProducts() {
   state.loading = true;
   const { data: products } = await db.from('products').select('*').eq('is_available', true).order('name');
