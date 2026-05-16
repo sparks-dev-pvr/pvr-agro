@@ -4054,6 +4054,25 @@ async function loadDashboard() {
     });
   });
 
+  // Expiry alerts
+  const today30 = new Date(); today30.setDate(today30.getDate() + 30);
+  const today60 = new Date(); today60.setDate(today60.getDate() + 60);
+  const today90 = new Date(); today90.setDate(today90.getDate() + 90);
+  const expiryAlerts = (purchaseItemsAll || []).filter(i => {
+    if (!i.exp_date) return false;
+    const parts = i.exp_date.split('/');
+    let expDate;
+    if (parts.length === 2) expDate = new Date(parseInt(parts[1]), parseInt(parts[0]) - 1, 1);
+    else if (parts.length === 3) expDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    else expDate = new Date(i.exp_date);
+    if (isNaN(expDate)) return false;
+    i._expDate = expDate;
+    return expDate <= today90 && expDate >= new Date();
+  }).map(i => {
+    const daysLeft = Math.floor((i._expDate - new Date()) / (1000 * 60 * 60 * 24));
+    return { ...i, daysLeft };
+  }).sort((a, b) => a.daysLeft - b.daysLeft);
+
   const overdueCredits = (credits || []).filter(c => c.balance > 0).sort((a, b) => b.balance - a.balance).slice(0, 5);
   const fmt = n => '₹' + (n || 0).toLocaleString('en-IN');
   const todayLabel = today.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' });
