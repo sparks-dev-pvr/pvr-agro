@@ -813,10 +813,11 @@ async function showAdminTab_DISABLED(tab) {
                 </div>
               </div>
             </div>
-            <div class="flex gap-2 mt-3 flex-wrap">
+           <div class="flex gap-2 mt-3 flex-wrap">
               <button onclick="toggleCreditDetail('${c.customer_id}')" class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 Party Statement</button>
               <button onclick="recordPayment('${c.customer_id}','${c.name}',${c.balance})" class="bg-green-700 text-white text-xs px-3 py-1 rounded-lg">💰 Record Payment</button>
               <button onclick="addManualEntry('${c.customer_id}','${c.name}')" class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">➕ Add Debit</button>
+              <button onclick="shareWhatsApp('${c.phone}','${c.name}',${c.balance})" class="bg-[#25D366] text-white text-xs px-3 py-1 rounded-lg">📲 WhatsApp</button>
             </div>
             <div id="credit_detail_${c.customer_id}" class="hidden mt-4"></div>
           </div>`).join('')}
@@ -3234,6 +3235,7 @@ async function showAdminTab(tab) {
               <button onclick="toggleCreditDetail('${c.customer_id}')" class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-lg">📋 Party Statement</button>
               <button onclick="recordPayment('${c.customer_id}','${c.name}',${c.balance})" class="bg-green-700 text-white text-xs px-3 py-1 rounded-lg">💰 Record Payment</button>
               <button onclick="addManualEntry('${c.customer_id}','${c.name}')" class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-lg">➕ Add Debit</button>
+              <button onclick="shareWhatsApp('${c.phone}','${c.name}',${c.balance})" class="bg-[#25D366] text-white text-xs px-3 py-1 rounded-lg">📲 WhatsApp</button>
             </div>
             <div id="credit_detail_${c.customer_id}" class="hidden mt-4"></div>
           </div>`).join('')}
