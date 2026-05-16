@@ -1694,11 +1694,17 @@ async function aiSaveItems(orderId, customerId) {
 
 function filterPurchases() {
   const search = document.getElementById('purchase_search')?.value.toLowerCase() || '';
+  const from = document.getElementById('purchase_from')?.value || '';
+  const to = document.getElementById('purchase_to')?.value || '';
   document.querySelectorAll('.purchase-card').forEach(card => {
     const supplier = card.dataset.supplier || '';
     const products = card.dataset.products || '';
     const billno = card.dataset.billno || '';
-    card.style.display = (supplier.includes(search) || products.includes(search) || billno.includes(search)) ? 'block' : 'none';
+    const date = card.dataset.date || '';
+    const matchSearch = supplier.includes(search) || products.includes(search) || billno.includes(search);
+    const matchFrom = !from || date >= from;
+    const matchTo = !to || date <= to;
+    card.style.display = (matchSearch && matchFrom && matchTo) ? 'block' : 'none';
   });
 }
 
