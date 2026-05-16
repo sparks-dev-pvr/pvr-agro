@@ -2515,6 +2515,12 @@ async function showReportsTab(subTab) {
   if (!content) return;
   window._reportsSubTab = subTab || window._reportsSubTab || 'monthly';
   const activeTab = window._reportsSubTab;
+  // Auto set this month range
+  const _now = new Date();
+  const _from = new Date(_now.getFullYear(), _now.getMonth(), 1);
+  const _to = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
+  window._autoFrom = getISTDateString(_from);
+  window._autoTo = getISTDateString(_to);
 
   const tabBtn = (id, label, icon) => `<button onclick="showReportsTab('${id}')"
     class="px-3 py-2 rounded-xl text-sm font-medium border transition text-center
