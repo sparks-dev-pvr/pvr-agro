@@ -1301,8 +1301,9 @@ async function placeOrder() {
       note: payment === 'cash' ? 'Cash order' : 'Credit order',
     });
     state.cart = []; saveCart();
-    alert('Order placed! 🌿\nOrder ID: ' + order.id.substring(0,8).toUpperCase() + '\nTrack with: ' + phone);
-    state.products = []; navigate('home');
+    state.lastOrder = { id: order.id.substring(0,8).toUpperCase(), phone, name, total: cartTotal() };
+    state.page = 'confirmation';
+    render();
   } catch (err) { alert('Error placing order. Please try again.'); console.error(err); }
 }
 
