@@ -139,27 +139,25 @@ function renderNav() {
 
 function renderBottomNav() {
   const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
-  const active = 'text-green-700 font-bold';
-  const inactive = 'text-gray-400';
-  const pages = ['home','cart','track'];
+  const active = 'bg-green-700 text-white';
+  const inactive = 'text-gray-600';
   if (['admin'].includes(state.page)) return '';
   return `
-  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex justify-around items-center py-2 px-4 shadow-lg">
-    <button onclick="navigate('home')" class="flex flex-col items-center gap-0.5 ${state.page==='home'?active:inactive}">
+  <div class="bg-white border-b border-gray-200 flex justify-around items-center py-2 px-4 shadow-sm">
+    <button onclick="navigate('home')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl ${state.page==='home'?active:inactive}">
       <span class="text-xl">🏠</span>
-      <span class="text-xs">Home</span>
+      <span class="text-xs font-medium">Home</span>
     </button>
-    <button onclick="navigate('cart')" class="flex flex-col items-center gap-0.5 relative ${state.page==='cart'?active:inactive}">
+    <button onclick="navigate('cart')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl relative ${state.page==='cart'?active:inactive}">
       <span class="text-xl">🛒</span>
-      ${cartCount > 0 ? `<span class="absolute -top-1 right-2 bg-green-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">${cartCount}</span>` : ''}
-      <span class="text-xs">Cart</span>
+      ${cartCount > 0 ? `<span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">${cartCount}</span>` : ''}
+      <span class="text-xs font-medium">Cart</span>
     </button>
-    <button onclick="navigate('track')" class="flex flex-col items-center gap-0.5 ${state.page==='track'?active:inactive}">
+    <button onclick="navigate('track')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl ${state.page==='track'?active:inactive}">
       <span class="text-xl">📦</span>
-      <span class="text-xs">Track</span>
+      <span class="text-xs font-medium">Track</span>
     </button>
-  </div>
-  <div style="height:80px;"></div>`;
+  </div>`;
 }
 
 function getCategoryStyle(cat) {
