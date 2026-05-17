@@ -1610,8 +1610,11 @@ function renderProductGrid() {
 
 function quickAddToCart(productId) {
   const product = state.products.find(p => p.id === productId);
-  const v = product?.variants?.[0];
-  const pk = v?.packagings?.[0];
+  let v = null, pk = null;
+  for (const variant of (product?.variants || [])) {
+    const availPkg = (variant.packagings || []).find(p => p.stock_quantity > 0);
+    if (availPkg) { v = variant; pk = availPkg; break; }
+  }
   if (!product || !v || !pk) return;
   const existing = state.cart.find(i => i.pkgId === pk.id);
   if (existing) { existing.qty += 1; }
