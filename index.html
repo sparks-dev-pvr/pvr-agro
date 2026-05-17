@@ -1352,6 +1352,21 @@ async function trackOrder() {
   results.innerHTML = (orders||[]).map(o => '<div class="border rounded-lg p-3 mb-2"><div class="flex justify-between"><div class="font-bold text-sm">Order #'+o.id.substring(0,8).toUpperCase()+'</div><div class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">'+o.order_status+'</div></div><div class="text-xs text-gray-500">'+new Date(o.created_at).toLocaleString()+'</div><div class="text-green-700 font-bold">₹'+o.total_amount+'</div><div class="text-xs text-gray-400">'+o.payment_method+'</div></div>').join('');
 }
 
+async function autofillCustomer(phone) {
+  if (!phone || phone.length < 10) return;
+  const { data: customers } = await db.from('customers').select('*').eq('phone', phone).limit(1);
+  if (!customers || customers.length === 0) return;
+  const c = customers[0];
+  const nameEl = document.getElementById('co_name');
+  const addressEl = document.getElementById('co_address');
+  const gstEl = document.getElementById('co_gst');
+  const transportEl = document.getElementById('co_transport');
+  if (nameEl && !nameEl.value) nameEl.value = c.name || '';
+  if (addressEl && !addressEl.value) addressEl.value = c.address || '';
+  if (gstEl && !gstEl.value) gstEl.value = c.gst_number || '';
+  if (transportEl && !transportEl.value) transportEl.value = c.transport_name || '';
+}
+
 function adminLogin() {
   const pass = document.getElementById('admin_pass').value;
   if (pass === 'PVRagro2025') { state.adminLoggedIn = true; render(); }
