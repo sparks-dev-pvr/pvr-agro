@@ -4576,9 +4576,12 @@ async function loadDashboard() {
 
       <!-- Expiry Alerts -->
       ${expiryAlerts.length > 0 ? `
-      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-yellow-400">
-        <div class="font-bold text-yellow-600 mb-3">⏰ Expiring Soon (${expiryAlerts.length} batches)</div>
-        <div class="space-y-2">
+      <div class="bg-white rounded-xl shadow border-l-4 border-yellow-400 overflow-hidden">
+        <div class="flex justify-between items-center px-4 py-3 cursor-pointer" onclick="document.getElementById('expiry_list').classList.toggle('hidden'); this.querySelector('.expiry-arrow').textContent = document.getElementById('expiry_list').classList.contains('hidden') ? '▾' : '▴'">
+          <div class="font-bold text-yellow-600">⏰ Expiring Soon (${expiryAlerts.length} batches)</div>
+          <span class="expiry-arrow text-yellow-500 text-sm">▾</span>
+        </div>
+        <div id="expiry_list" class="hidden px-4 pb-4 space-y-2">
           ${expiryAlerts.slice(0, 6).map(e => `
             <div class="flex justify-between items-center text-sm border-b pb-1">
               <div>
