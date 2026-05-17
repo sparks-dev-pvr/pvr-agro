@@ -153,7 +153,7 @@ function renderBottomNav() {
     </button>
     <button onclick="navigate('cart')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl relative ${state.page==='cart'?active:inactive}">
       <span class="text-xl">🛒</span>
-      ${cartCount > 0 ? `<span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">${cartCount}</span>` : ''}
+      ${cartCount > 0 ? `<span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold cart-badge">${cartCount}</span>` : ''}
       <span class="text-xs font-medium">Cart</span>
     </button>
     <button onclick="navigate('track')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl ${state.page==='track'?active:inactive}">
