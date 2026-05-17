@@ -4695,7 +4695,31 @@ async function shareWhatsApp(phone, customerName, balance) {
   window.open(wa, '_blank');
 }
 
-function navigate(page) { state.page = page; render(); }
+function renderCartBar() {
+  const existing = document.getElementById('sticky_cart_bar');
+  if (existing) existing.remove();
+  if (state.page !== 'home' && state.page !== 'product') return;
+  const count = state.cart.reduce((s, i) => s + i.qty, 0);
+  if (count === 0) return;
+  const total = cartTotal();
+  const bar = document.createElement('div');
+  bar.id = 'sticky_cart_bar';
+  bar.className = 'fixed bottom-0 left-0 right-0 z-50 p-3';
+  bar.innerHTML = `<button onclick="navigate('cart')" class="w-full bg-green-700 text-white rounded-2xl py-3 px-5 flex justify-between items-center shadow-xl">
+    <div class="flex items-center gap-2">
+      <span class="bg-white text-green-700 font-bold text-xs rounded-full w-6 h-6 flex items-center justify-center">${count}</span>
+      <span class="font-bold text-sm">View Cart</span>
+    </div>
+    <span class="font-bold">₹${total.toLocaleString('en-IN')} →</span>
+  </button>`;
+  document.body.appendChild(bar);
+}
+
+function navigate(page) {
+  state.page = page;
+  render();
+  if (page === 'home' || page === 'product') renderCartBar();
+}
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
 render();
