@@ -118,6 +118,7 @@ function render() {
   else if (state.page === 'cart') { app.innerHTML = renderCart(); }
   else if (state.page === 'checkout') { app.innerHTML = renderCheckout(); }
   else if (state.page === 'track') { app.innerHTML = renderTrack(); }
+  else if (state.page === 'confirmation') { app.innerHTML = renderConfirmation(); }
   else if (state.page === 'product') { app.innerHTML = renderProduct(); initProductPage(); }
   else { app.innerHTML = renderHome(); if (state.products.length === 0) loadProducts(); else renderProductGrid(); }
   attachEvents();
