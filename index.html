@@ -1694,7 +1694,7 @@ function renderProductGrid() {
     const pk = v && v.packagings && v.packagings[0];
     let availV = null, availPk = null;
     for (const variant of (p.variants || [])) {
-      const found = (variant.packagings || []).find(pk => pk.stock_quantity > 0);
+      const found = (variant.packagings || []).find(p => p.stock_quantity > 0);
       if (found) { availV = variant; availPk = found; break; }
     }
     const canAdd = !!availPk;
