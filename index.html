@@ -182,10 +182,23 @@ function renderHome() {
       <button onclick="state.search=''; renderProductGrid();"
         class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium">Clear</button>
     </div>
-    <div class="mb-6">
-      <select onchange="state.category=this.value; renderProductGrid();"
-        class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-green-500 bg-white text-gray-700 font-medium">
-        ${categories.map(c => `<option value="${c}" ${state.category === c ? 'selected' : ''}>${c === 'all' ? '🌾 All Products' : getCategoryStyle(c).icon + ' ' + c}</option>`).join('')}
+    <div class="mb-4 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+      ${categories.map(c => {
+        const s = getCategoryStyle(c);
+        const active = state.category === c;
+        return `<button onclick="state.category='${c}'; renderProductGrid();"
+          class="flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium border transition
+          ${active ? 'bg-green-700 text-white border-green-700' : 'bg-white text-gray-600 border-gray-300'}">
+          ${c === 'all' ? '🌾 All' : s.icon + ' ' + c}
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="flex justify-end mb-3">
+      <select onchange="state.sort=this.value; renderProductGrid();"
+        class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-green-500 bg-white text-gray-600">
+        <option value="name" ${state.sort === 'name' ? 'selected' : ''}>A–Z</option>
+        <option value="price_asc" ${state.sort === 'price_asc' ? 'selected' : ''}>Price: Low to High</option>
+        <option value="price_desc" ${state.sort === 'price_desc' ? 'selected' : ''}>Price: High to Low</option>
       </select>
     </div>
     ${state.loading ? '<div class="text-center py-10 text-gray-500">Loading products...</div>' : ''}
