@@ -1735,15 +1735,13 @@ function quickAddToCart(productId) {
     });
   }
   saveCart();
-  const nav = document.querySelector('nav');
-  if (nav) {
-    const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
-    const badge = nav.querySelector('.cart-badge');
-    if (badge) badge.textContent = cartCount;
-    else {
-      const cartBtn = nav.querySelector('[onclick="navigate(\'cart\')"]');
-      if (cartBtn) cartBtn.innerHTML = `🛒<span class="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold cart-badge">${cartCount}</span>`;
-    }
+  const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
+  const badge = document.querySelector('.cart-badge');
+  if (badge) {
+    badge.textContent = cartCount;
+  } else {
+    const cartBtn = document.querySelector('[onclick="navigate(\'cart\')"]');
+    if (cartBtn) cartBtn.innerHTML = `🛒<span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold cart-badge">${cartCount}</span>`;
   }
   const btn = event.target;
   btn.textContent = '✅ Added!';
