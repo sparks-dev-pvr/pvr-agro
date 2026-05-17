@@ -328,7 +328,8 @@ function updatePackagingDetails(productId, variantId) {
       ${pkg.stock_quantity === 0 ? 'disabled' : ''}
       class="w-full ${pkg.stock_quantity === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'} text-white py-3 rounded-xl font-bold text-lg">
       ${pkg.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart 🛒'}
-    </button>`;
+    </button>
+    <div style="height:100px;"></div>`;
 }
 
 function addToCartPkg(productId, variantId, pkgId) {
