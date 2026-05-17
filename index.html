@@ -1735,7 +1735,16 @@ function quickAddToCart(productId) {
     });
   }
   saveCart();
-  renderCartBar();
+  const nav = document.querySelector('nav');
+  if (nav) {
+    const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
+    const badge = nav.querySelector('.cart-badge');
+    if (badge) badge.textContent = cartCount;
+    else {
+      const cartBtn = nav.querySelector('[onclick="navigate(\'cart\')"]');
+      if (cartBtn) cartBtn.innerHTML = `🛒<span class="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold cart-badge">${cartCount}</span>`;
+    }
+  }
   const btn = event.target;
   btn.textContent = '✅ Added!';
   btn.classList.replace('bg-green-700', 'bg-green-500');
