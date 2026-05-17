@@ -1349,7 +1349,39 @@ async function trackOrder() {
     return;
   }
   const { data: orders } = await db.from('orders').select('*').eq('customer_id', customers[0].id).order('created_at', { ascending: false });
-  results.innerHTML = (orders||[]).map(o => '<div class="border rounded-lg p-3 mb-2"><div class="flex justify-between"><div class="font-bold text-sm">Order #'+o.id.substring(0,8).toUpperCase()+'</div><div class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">'+o.order_status+'</div></div><div class="text-xs text-gray-500">'+new Date(o.created_at).toLocaleString()+'</div><div class="text-green-700 font-bold">₹'+o.total_amount+'</div><div class="text-xs text-gray-400">'+o.payment_method+'</div></div>').join('');
+  const { data: orderItems } = await db.from('order_items').select('*').in('order_id', (orders||[]).map(o=>o.id));
+  const statusSteps = ['pending','confirmed','dispatched'];
+  const statusColors = { pending:'bg-yellow-400', confirmed:'bg-blue-500', dispatched:'bg-green-600', cancelled:'bg-red-400' };
+  const statusIcons = { pending:'⏳', confirmed:'✅', dispatched:'🚚', cancelled:'❌' };
+  results.innerHTML = (orders||[]).map(o => {
+    const items = (orderItems||[]).filter(i => i.order_id === o.id);
+    const isCancelled = o.order_status === 'cancelled';
+    const currentStep = statusSteps.indexOf(o.order_status);
+    const timeline = isCancelled
+      ? `<div class="flex items-center gap-2 mt-3"><div class="w-8 h-8 rounded-full bg-red-400 flex items-center justify-center text-white text-sm">❌</div><div class="text-sm font-bold text-red-500">Order Cancelled</div></div>`
+      : `<div class="flex items-center mt-3 mb-1">
+          ${statusSteps.map((s, i) => `
+            <div class="flex items-center ${i < statusSteps.length - 1 ? 'flex-1' : ''}">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
+                  ${i <= currentStep ? statusColors[s] + ' text-white' : 'bg-gray-200 text-gray-400'}">
+                  ${i <= currentStep ? statusIcons[s] : i + 1}
+                </div>
+                <div class="text-xs mt-1 ${i <= currentStep ? 'text-gray-700 font-medium' : 'text-gray-400'}">${s.charAt(0).toUpperCase()+s.slice(1)}</div>
+              </div>
+              ${i < statusSteps.length - 1 ? `<div class="flex-1 h-1 mx-1 rounded ${i < currentStep ? 'bg-green-500' : 'bg-gray-200'}"></div>` : ''}
+            </div>`).join('')}
+        </div>`;
+    return `<div class="bg-white border rounded-2xl p-4 mb-3 shadow-sm">
+      <div class="flex justify-between items-start mb-1">
+        <div class="font-bold text-gray-800">Order #${o.id.substring(0,8).toUpperCase()}</div>
+        <div class="text-green-700 font-bold">₹${o.total_amount}</div>
+      </div>
+      <div class="text-xs text-gray-400 mb-1">${new Date(o.created_at).toLocaleString('en-IN')} · ${o.payment_method}</div>
+      ${items.length > 0 ? `<div class="text-xs text-gray-500 mb-2">${items.map(i => (i.product_name||'') + ' x' + i.quantity).join(', ')}</div>` : ''}
+      ${timeline}
+    </div>`;
+  }).join('');
 }
 
 async function autofillCustomer(phone) {
