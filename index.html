@@ -4817,7 +4817,6 @@ async function shareWhatsApp(phone, customerName, balance) {
 function navigate(page) {
   state.page = page;
   render();
-  if (page === 'home' || page === 'product') renderCartBar();
 }
 function attachEvents() {}
 if (window.location.hash === '#admin') state.page = 'admin';
