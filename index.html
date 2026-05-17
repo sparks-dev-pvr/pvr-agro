@@ -125,21 +125,40 @@ function render() {
 }
 
 function renderNav() {
-  const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
   return `
   <nav class="bg-green-700 text-white px-4 py-2 flex items-center justify-between sticky top-0 z-50 shadow">
     <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('home')">
       <img src="${LOGO_URL}" class="h-10 w-10 rounded-full object-cover border-2 border-white" onerror="this.style.display='none'" />
       <span class="font-bold text-lg">PVR Agro</span>
     </div>
-    <div class="flex items-center gap-4">
-      <span class="cursor-pointer text-sm hover:underline" onclick="navigate('track')">Track Order</span>
-      <span class="cursor-pointer relative" onclick="navigate('cart')">
-        🛒
-        ${cartCount > 0 ? `<span class="absolute -top-2 -right-2 bg-yellow-400 text-black text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">${cartCount}</span>` : ''}
-      </span>
-    </div>
-  </nav>`;
+    <div class="text-xs text-green-200">P.V.R Agrochemicals</div>
+  </nav>
+  ${renderBottomNav()}`;
+}
+
+function renderBottomNav() {
+  const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
+  const active = 'text-green-700 font-bold';
+  const inactive = 'text-gray-400';
+  const pages = ['home','cart','track'];
+  if (['admin'].includes(state.page)) return '';
+  return `
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 flex justify-around items-center py-2 px-4 shadow-lg">
+    <button onclick="navigate('home')" class="flex flex-col items-center gap-0.5 ${state.page==='home'?active:inactive}">
+      <span class="text-xl">🏠</span>
+      <span class="text-xs">Home</span>
+    </button>
+    <button onclick="navigate('cart')" class="flex flex-col items-center gap-0.5 relative ${state.page==='cart'?active:inactive}">
+      <span class="text-xl">🛒</span>
+      ${cartCount > 0 ? `<span class="absolute -top-1 right-2 bg-green-700 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">${cartCount}</span>` : ''}
+      <span class="text-xs">Cart</span>
+    </button>
+    <button onclick="navigate('track')" class="flex flex-col items-center gap-0.5 ${state.page==='track'?active:inactive}">
+      <span class="text-xl">📦</span>
+      <span class="text-xs">Track</span>
+    </button>
+  </div>
+  <div class="h-16"></div>`;
 }
 
 function getCategoryStyle(cat) {
