@@ -1594,6 +1594,12 @@ function renderProductGrid() {
   grid.innerHTML = filtered.map(p => {
     const v = p.variants && p.variants[0];
     const pk = v && v.packagings && v.packagings[0];
+    let availV = null, availPk = null;
+    for (const variant of (p.variants || [])) {
+      const found = (variant.packagings || []).find(pk => pk.stock_quantity > 0);
+      if (found) { availV = variant; availPk = found; break; }
+    }
+    const canAdd = !!availPk;
     const img = p.image_url ? '<img src="' + p.image_url + '" class="w-full h-full object-cover" />' : renderPlaceholder(p.category);
     const price = pk ? '<div class="text-xs text-gray-400">MRP: \u20b9' + (pk.mrp_per_unit||'-') + '/unit</div><div class="text-green-700 font-bold text-sm">Billing: \u20b9' + (pk.price_per_unit||'-') + '/unit</div><div class="text-xs text-gray-500">\u20b9' + pk.price_per_box + '/' + pk.box_label + '</div>' : '<div class="text-xs text-gray-400">No variants</div>';
     const chem = p.chemical_name ? '<div class="text-xs text-blue-400 mb-1">' + p.chemical_name + '</div>' : '';
