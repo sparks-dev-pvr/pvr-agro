@@ -477,7 +477,10 @@ function renderTrack() {
     <div class="bg-white rounded-xl shadow p-4">
       <input id="track_phone" type="tel" placeholder="Enter your phone number"
         class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-green-500" />
-      <button onclick="trackOrder()" class="w-full bg-green-700 text-white py-2 rounded-lg font-bold">Track</button>
+      <div class="grid grid-cols-2 gap-2 mb-1">
+        <button onclick="trackOrder()" class="bg-green-700 text-white py-2 rounded-lg font-bold text-sm">📦 Track</button>
+        <button onclick="showOrderHistory(document.getElementById('track_phone').value)" class="bg-blue-600 text-white py-2 rounded-lg font-bold text-sm">📋 History</button>
+      </div>
       <div id="track_results" class="mt-4"></div>
     </div>
   </div>`;
