@@ -63,9 +63,7 @@ const manifest = {
     { src: LOGO_URL, sizes: '512x512', type: 'image/jpeg' }
   ]
 };
-const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-const manifestUrl = URL.createObjectURL(manifestBlob);
-document.getElementById('manifest-placeholder').setAttribute('href', manifestUrl);
+document.getElementById('manifest-placeholder').setAttribute('href', '/manifest.json');
 
 // PWA Install
 let deferredPrompt = null;
