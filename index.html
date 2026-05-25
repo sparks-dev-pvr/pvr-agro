@@ -642,7 +642,8 @@ async function showAdminTab_DISABLED(tab) {
                 <div class="text-xs text-gray-600 ml-2">
                   <span class="font-medium">${v.bag_size}</span>
                   ${(v.packagings || []).map(pk => `
-                    <span class="ml-2 text-gray-500">${pk.box_label}: ₹${pk.price_per_box}/box · ₹${pk.price_per_unit || '-'}/unit (Stock: ${pk.stock_quantity})</span>
+                    <span class="ml-2 text-gray-500">${pk.box_label}: ₹${pk.price_per_box}/box · ₹${pk.price_per_unit || '-'}/unit (Stock: ${pk.stock_quantity})
+                    <button onclick="quickStockEdit('${pk.id}',${pk.stock_quantity},'${p.name.replace(/'/g,"\\'")}','${pk.box_label}')" class="ml-1 text-blue-400 underline">✏️ Stock</button></span>
                   `).join('')}
                 </div>`).join('')}
             </div>
