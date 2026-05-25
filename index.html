@@ -145,7 +145,7 @@ function renderBottomNav() {
   const inactive = 'text-gray-600';
   if (['admin'].includes(state.page)) return '';
   return `
-  <div class="bg-white border-b border-gray-200 flex justify-around items-center py-2 px-4 shadow-sm">
+  <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center py-2 px-4 shadow-lg z-50">
     <button onclick="navigate('home')" class="flex flex-col items-center gap-0.5 px-4 py-1 rounded-xl ${state.page==='home'?active:inactive}">
       <span class="text-xl">🏠</span>
       <span class="text-xs font-medium">Home</span>
