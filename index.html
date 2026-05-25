@@ -3373,6 +3373,7 @@ async function showAdminTab(tab) {
   if (!content) return;
   if (tab === 'reports') { window._reportsSubTab = 'monthly'; showReportsTab('monthly'); return; }
   if (tab === 'dashboard') { loadDashboard(); return; }
+  if (tab === 'returns') { showReturnsTab(); return; }
   content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
   setTimeout(addDashboardBackBtn, 800);
 
