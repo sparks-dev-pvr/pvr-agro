@@ -4656,6 +4656,13 @@ async function loadDashboard() {
   ]);
 
   const todaySales = (todayOrders || []).reduce((s, o) => s + (o.total_amount || 0), 0);
+  // Fetch last 14 days for chart
+  const chart14From = new Date(); chart14From.setDate(chart14From.getDate() - 13);
+  const { data: chartOrders } = await db.from('orders').select('created_at, total_amount').gte('created_at', chart14From.toISOString());
+  setTimeout(() => {
+    const chartArea = document.getElementById('sales_chart_area');
+    if (chartArea) chartArea.innerHTML = renderSalesChart(chartOrders || []);
+  }, 100);
   const todayPurchases = (purchases || []).reduce((s, p) => s + (p.total_amount || 0), 0);
   const pendingOrders = (allOrders || []).filter(o => o.order_status === 'pending').length;
   const totalOutstanding = (credits || []).reduce((s, c) => s + (c.balance > 0 ? c.balance : 0), 0);
