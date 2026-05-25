@@ -4816,6 +4816,416 @@ async function shareWhatsApp(phone, customerName, balance) {
   window.open(wa, '_blank');
 }
 
+// ============ PHASE 7 — BULK STOCK UPDATE ============
+async function showBulkStockUpdate() {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').order('name');
+  content.innerHTML = `
+    <button onclick="showAdminTab('products')" class="text-green-700 text-sm mb-3 flex items-center gap-1 font-medium">← Dashboard</button>
+    <h2 class="text-xl font-bold mb-4">📦 Bulk Stock Update</h2>
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <input id="bulk_stock_search" type="text" placeholder="Search products..." oninput="filterBulkStock()"
+        class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-green-500 mb-3" />
+      <div class="space-y-3" id="bulk_stock_list">
+        ${(products||[]).map(p => `
+          <div class="border rounded-xl p-3 bulk-stock-item" data-name="${p.name.toLowerCase()}">
+            <div class="font-bold text-gray-800 text-sm mb-2">${p.name} <span class="text-xs text-gray-400">${p.company_name||''}</span></div>
+            ${(p.product_variants||[]).map(v => `
+              ${(v.product_packagings||[]).map(pk => `
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-xs text-gray-500 flex-1">${v.bag_size} · ${pk.box_label}</span>
+                  <span class="text-xs text-gray-400">Current: <b>${pk.stock_quantity}</b></span>
+                  <input type="number" id="bs_${pk.id}" value="${pk.stock_quantity}" min="0"
+                    class="w-20 border rounded px-2 py-1 text-xs text-center" />
+                </div>`).join('')}
+            `).join('')}
+          </div>`).join('')}
+      </div>
+      <button onclick="saveBulkStock()" class="w-full bg-green-700 text-white py-2 rounded-xl font-bold mt-4">💾 Save All Stock</button>
+    </div>`;
+  window._bulkStockProducts = products || [];
+}
+
+function filterBulkStock() {
+  const search = document.getElementById('bulk_stock_search')?.value.toLowerCase() || '';
+  document.querySelectorAll('.bulk-stock-item').forEach(el => {
+    el.style.display = el.dataset.name.includes(search) ? 'block' : 'none';
+  });
+}
+
+async function saveBulkStock() {
+  const products = window._bulkStockProducts || [];
+  let updated = 0;
+  for (const p of products) {
+    for (const v of (p.product_variants||[])) {
+      for (const pk of (v.product_packagings||[])) {
+        const input = document.getElementById('bs_' + pk.id);
+        if (!input) continue;
+        const newQty = parseInt(input.value);
+        if (!isNaN(newQty) && newQty !== pk.stock_quantity) {
+          await db.from('product_packagings').update({ stock_quantity: newQty }).eq('id', pk.id);
+          updated++;
+        }
+      }
+    }
+  }
+  alert('✅ ' + updated + ' packaging(s) updated!');
+  showAdminTab('products');
+}
+
+// ============ PHASE 7 — SALES RETURNS ============
+async function showReturnsTab() {
+  const content = document.getElementById('admin_content');
+  if (!content) return;
+  content.innerHTML = '<div class="text-center py-10 text-gray-400">Loading...</div>';
+  addDashboardBackBtn();
+
+  const { data: returns } = await db.from('sales_returns').select('*').order('created_at', { ascending: false });
+  const { data: orders } = await db.from('orders').select('id, customers(name, phone)').order('created_at', { ascending: false });
+  window._allReturnsOrders = orders || [];
+
+  const fmt = n => '₹' + (n||0).toLocaleString('en-IN');
+  const totalReturns = (returns||[]).reduce((s,r) => s + (r.amount||0), 0);
+
+  content.innerHTML = `
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">↩️ Sales Returns</h2>
+      <button onclick="showAddReturn()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">+ New Return</button>
+    </div>
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+        <div class="text-xs text-gray-400">Total Returns Value</div>
+        <div class="font-bold text-red-500 text-lg">${fmt(totalReturns)}</div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+        <div class="text-xs text-gray-400">Total Returns</div>
+        <div class="font-bold text-gray-700 text-lg">${(returns||[]).length}</div>
+      </div>
+    </div>
+    <div id="add_return_form"></div>
+    <div class="space-y-3">
+      ${(returns||[]).length === 0 ? '<div class="text-center py-10 text-gray-400">No returns yet</div>' :
+      (returns||[]).map(r => `
+        <div class="bg-white rounded-xl shadow p-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-gray-800">${r.product_name||'Unknown'}</div>
+              <div class="text-xs text-gray-500">${r.variant_name||''} · Qty: ${r.quantity}</div>
+              <div class="text-xs text-gray-400">${new Date(r.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+              ${r.reason ? `<div class="text-xs text-orange-500 mt-1">Reason: ${r.reason}</div>` : ''}
+            </div>
+            <div class="text-right">
+              <div class="font-bold text-red-500">${fmt(r.amount)}</div>
+              <button onclick="deleteReturn('${r.id}','${r.customer_id}',${r.amount},'${r.product_name||''}','${r.variant_name||''}',${r.quantity},'${r.pkg_id||''}')" class="text-xs text-red-400 mt-1">🗑 Delete</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function showAddReturn() {
+  const form = document.getElementById('add_return_form');
+  if (!form) return;
+  if (form.innerHTML !== '') { form.innerHTML = ''; return; }
+  const orders = window._allReturnsOrders || [];
+  const { data: products } = await db.from('products').select('*, product_variants(*, product_packagings(*))').eq('is_available', true).order('name');
+  form.innerHTML = `
+    <div class="bg-white rounded-xl shadow p-4 mb-4 border-2 border-red-200">
+      <h3 class="font-bold text-red-600 mb-3">New Sales Return</h3>
+      <div class="space-y-2">
+        <select id="ret_order" onchange="retFillCustomer()" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- Select Order (optional) --</option>
+          ${orders.map(o => `<option value="${o.id}" data-customer="${o.customers?.name||''}" data-phone="${o.customers?.phone||''}" data-cid="${o.id}">${o.customers?.name||'Unknown'} · #${o.id.substring(0,8).toUpperCase()}</option>`).join('')}
+        </select>
+        <input id="ret_customer_id" type="hidden" />
+        <input id="ret_customer_name" placeholder="Customer Name *" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <select id="ret_product" onchange="retSelectVariants()" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- Select Product *--</option>
+          ${(products||[]).map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+        </select>
+        <select id="ret_variant" onchange="retSelectPkgs()" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- Select Size --</option>
+        </select>
+        <select id="ret_pkg" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- Select Packaging --</option>
+        </select>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-gray-500 block mb-0.5">Quantity (boxes) *</label>
+            <input id="ret_qty" type="number" min="1" value="1" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+          <div><label class="text-xs text-gray-500 block mb-0.5">Return Amount ₹ *</label>
+            <input id="ret_amount" type="number" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        </div>
+        <input id="ret_reason" placeholder="Reason for return (optional)" class="w-full border rounded-lg px-3 py-2 text-sm" />
+        <button onclick="saveReturn()" class="w-full bg-red-600 text-white py-2 rounded-xl font-bold">Save Return</button>
+      </div>
+    </div>`;
+  window._retProducts = products || [];
+}
+
+function retFillCustomer() {
+  const sel = document.getElementById('ret_order');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.customer) {
+    document.getElementById('ret_customer_name').value = opt.dataset.customer;
+  }
+}
+
+function retSelectVariants() {
+  const pid = document.getElementById('ret_product').value;
+  const product = (window._retProducts||[]).find(p => p.id === pid);
+  const varSel = document.getElementById('ret_variant');
+  varSel.innerHTML = '<option value="">-- Select Size --</option>' +
+    (product?.product_variants||[]).map(v => `<option value="${v.id}">${v.bag_size}</option>`).join('');
+  document.getElementById('ret_pkg').innerHTML = '<option value="">-- Select Packaging --</option>';
+}
+
+function retSelectPkgs() {
+  const pid = document.getElementById('ret_product').value;
+  const vid = document.getElementById('ret_variant').value;
+  const product = (window._retProducts||[]).find(p => p.id === pid);
+  const variant = (product?.product_variants||[]).find(v => v.id === vid);
+  const pkgSel = document.getElementById('ret_pkg');
+  pkgSel.innerHTML = '<option value="">-- Select Packaging --</option>' +
+    (variant?.product_packagings||[]).map(pk => `<option value="${pk.id}" data-price="${pk.price_per_box}">${pk.box_label} · ₹${pk.price_per_box}/box</option>`).join('');
+  pkgSel.onchange = () => {
+    const opt = pkgSel.options[pkgSel.selectedIndex];
+    const qty = parseInt(document.getElementById('ret_qty').value) || 1;
+    if (opt && opt.dataset.price) {
+      document.getElementById('ret_amount').value = (parseFloat(opt.dataset.price) * qty).toFixed(0);
+    }
+  };
+}
+
+async function saveReturn() {
+  const orderId = document.getElementById('ret_order').value || null;
+  const customerName = document.getElementById('ret_customer_name').value.trim();
+  const pid = document.getElementById('ret_product').value;
+  const vid = document.getElementById('ret_variant').value;
+  const pkgId = document.getElementById('ret_pkg').value;
+  const qty = parseInt(document.getElementById('ret_qty').value) || 0;
+  const amount = parseFloat(document.getElementById('ret_amount').value) || 0;
+  const reason = document.getElementById('ret_reason').value.trim();
+
+  if (!customerName || !pid || !qty || !amount) { alert('Customer, product, quantity and amount are required!'); return; }
+
+  const product = (window._retProducts||[]).find(p => p.id === pid);
+  const variant = (product?.product_variants||[]).find(v => v.id === vid);
+
+  // Get customer_id from order if selected
+  let customerId = null;
+  if (orderId) {
+    const { data: ord } = await db.from('orders').select('customer_id').eq('id', orderId).single();
+    customerId = ord?.customer_id || null;
+  } else {
+    const { data: cust } = await db.from('customers').select('id').ilike('name', customerName).limit(1);
+    customerId = cust?.[0]?.id || null;
+  }
+
+  // Insert return record
+  const { error } = await db.from('sales_returns').insert({
+    order_id: orderId,
+    customer_id: customerId,
+    product_id: pid,
+    variant_id: vid,
+    pkg_id: pkgId || null,
+    product_name: product?.name || '',
+    variant_name: variant?.bag_size || '',
+    quantity: qty,
+    amount,
+    reason,
+  });
+  if (error) { alert('Error: ' + error.message); return; }
+
+  // Reverse stock
+  if (pkgId) {
+    const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', pkgId).single();
+    if (pkg) await db.from('product_packagings').update({ stock_quantity: (pkg.stock_quantity||0) + qty }).eq('id', pkgId);
+  }
+
+  // Reverse credit ledger (add credit to customer)
+  if (customerId) {
+    await db.from('credit_ledger').insert({
+      customer_id: customerId,
+      order_id: orderId,
+      amount,
+      type: 'credit',
+      note: 'Sales return: ' + (product?.name||'') + ' x' + qty + (reason ? ' (' + reason + ')' : ''),
+    });
+  }
+
+  alert('Return recorded! ✅ Stock restored & credit ledger updated.');
+  showReturnsTab();
+}
+
+async function deleteReturn(returnId, customerId, amount, productName, variantName, qty, pkgId) {
+  if (!confirm('Delete this return? Stock and credit ledger will be reversed.')) return;
+
+  // Reverse stock (deduct back)
+  if (pkgId && pkgId !== 'undefined') {
+    const { data: pkg } = await db.from('product_packagings').select('stock_quantity').eq('id', pkgId).single();
+    if (pkg) await db.from('product_packagings').update({ stock_quantity: Math.max(0, (pkg.stock_quantity||0) - qty) }).eq('id', pkgId);
+  }
+
+  // Reverse credit (add debit back)
+  if (customerId && customerId !== 'undefined') {
+    await db.from('credit_ledger').insert({
+      customer_id: customerId,
+      amount,
+      type: 'debit',
+      note: 'Return reversal: ' + productName + ' x' + qty,
+    });
+  }
+
+  await db.from('sales_returns').delete().eq('id', returnId);
+  alert('Return deleted! ✅');
+  showReturnsTab();
+}
+
+// ============ PHASE 7 — CREDIT DAYS & OVERDUE BADGE ============
+async function editCustomerCreditDays(customerId, customerName, currentDays) {
+  const days = prompt('Credit days for ' + customerName + ':\n(Payment due after this many days from order date)', currentDays || 90);
+  if (!days || isNaN(days)) return;
+  await db.from('customers').update({ credit_days: parseInt(days) }).eq('id', customerId);
+  alert('Credit days updated! ✅');
+  showAdminTab('credit');
+}
+
+// ============ PHASE 7 — BULK WHATSAPP ============
+async function bulkWhatsAppReminder() {
+  const { data: credits } = await db.from('credit_summary').select('*');
+  const overdue = (credits||[]).filter(c => c.balance > 0);
+  if (overdue.length === 0) { alert('No outstanding balances! ✅'); return; }
+  if (!confirm('Send WhatsApp reminders to ' + overdue.length + ' customers?\n\nThis will open ' + overdue.length + ' WhatsApp tabs.')) return;
+  const fmt = n => '₹' + (n||0).toLocaleString('en-IN');
+  for (let i = 0; i < overdue.length; i++) {
+    const c = overdue[i];
+    const msg = `Dear ${c.name},\n\nThis is a friendly reminder from *P.V.R Agrochemicals*.\n\nYour outstanding balance is *${fmt(c.balance)}*.\n\nKindly arrange the payment at your earliest convenience.\n\nThank you 🌿\n— PVR Agro Team\n📞 9573711019`;
+    const cleanPhone = (c.phone||'').replace(/\D/g,'');
+    setTimeout(() => window.open('https://wa.me/91' + cleanPhone + '?text=' + encodeURIComponent(msg), '_blank'), i * 600);
+  }
+}
+
+// ============ PHASE 7 — DAY-WISE SALES CHART ============
+function renderSalesChart(orders) {
+  const dayCounts = {};
+  (orders||[]).forEach(o => {
+    const d = new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    dayCounts[d] = (dayCounts[d] || 0) + (o.total_amount || 0);
+  });
+  const labels = Object.keys(dayCounts).slice(-14);
+  const values = labels.map(l => dayCounts[l]);
+  if (labels.length === 0) return '';
+  const maxVal = Math.max(...values);
+  return `
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <div class="font-bold text-gray-700 mb-3">📈 Day-wise Sales (Last 14 days)</div>
+      <div class="flex items-end gap-1 h-28 overflow-x-auto pb-2">
+        ${labels.map((l, i) => {
+          const h = maxVal > 0 ? Math.max(4, Math.round((values[i] / maxVal) * 96)) : 4;
+          return `<div class="flex flex-col items-center flex-shrink-0" style="min-width:32px">
+            <div class="text-xs text-green-700 font-bold mb-0.5">${values[i] >= 1000 ? (values[i]/1000).toFixed(0)+'k' : values[i]}</div>
+            <div class="bg-green-600 rounded-t w-6" style="height:${h}px"></div>
+            <div class="text-xs text-gray-400 mt-1 whitespace-nowrap" style="font-size:9px">${l}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+// ============ PHASE 7 — ORDER HISTORY & REORDER (customer side) ============
+async function showOrderHistory(phone) {
+  if (!phone || phone.length < 10) return;
+  const results = document.getElementById('track_results');
+  if (!results) return;
+  results.innerHTML = '<div class="text-gray-400 text-center py-4">Loading order history...</div>';
+  const { data: customers } = await db.from('customers').select('*').eq('phone', phone);
+  if (!customers || customers.length === 0) {
+    results.innerHTML = '<div class="text-red-400 text-center">No orders found for this number</div>';
+    return;
+  }
+  const { data: orders } = await db.from('orders').select('*').eq('customer_id', customers[0].id).order('created_at', { ascending: false });
+  const { data: orderItems } = await db.from('order_items').select('*').in('order_id', (orders||[]).map(o=>o.id));
+  const fmt = n => '₹' + (n||0).toLocaleString('en-IN');
+  const statusColors = { pending:'bg-yellow-400', confirmed:'bg-blue-500', dispatched:'bg-green-600', cancelled:'bg-red-400' };
+  results.innerHTML = `
+    <div class="text-sm font-bold text-gray-700 mb-3">📋 Order History — ${customers[0].name}</div>
+    ${(orders||[]).map(o => {
+      const items = (orderItems||[]).filter(i => i.order_id === o.id);
+      return `<div class="bg-white border rounded-2xl p-4 mb-3 shadow-sm">
+        <div class="flex justify-between items-start mb-2">
+          <div>
+            <div class="font-bold text-gray-800 text-sm">Order #${o.id.substring(0,8).toUpperCase()}</div>
+            <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString('en-IN')} · ${o.payment_method}</div>
+          </div>
+          <div class="text-right">
+            <div class="text-green-700 font-bold">${fmt(o.total_amount)}</div>
+            <span class="text-xs px-2 py-0.5 rounded-full text-white ${statusColors[o.order_status]||'bg-gray-400'}">${o.order_status}</span>
+          </div>
+        </div>
+        ${items.length > 0 ? `<div class="text-xs text-gray-500 mb-2 border-t pt-2">${items.map(i => (i.product_name||'') + ' x' + i.quantity).join(', ')}</div>` : ''}
+        <button onclick="reorderItems(${JSON.stringify(items).replace(/"/g,'&quot;')})" class="w-full bg-green-700 text-white py-1.5 rounded-lg text-xs font-bold">🔄 Reorder</button>
+      </div>`;
+    }).join('')}`;
+}
+
+function reorderItems(items) {
+  if (!items || items.length === 0) { alert('No items to reorder!'); return; }
+  const added = [];
+  items.forEach(item => {
+    const product = state.products.find(p => p.name === item.product_name);
+    if (!product) return;
+    let v = null, pk = null;
+    for (const variant of (product.variants||[])) {
+      if (variant.bag_size === item.variant_name) {
+        const availPkg = (variant.packagings||[]).find(p => p.stock_quantity > 0);
+        if (availPkg) { v = variant; pk = availPkg; break; }
+      }
+    }
+    if (!v || !pk) return;
+    const existing = state.cart.find(i => i.pkgId === pk.id);
+    if (existing) { existing.qty += item.quantity; }
+    else {
+      state.cart.push({
+        productId: product.id, variantId: v.id, pkgId: pk.id,
+        name: product.name, size: v.bag_size,
+        boxLabel: pk.box_label, unitsPerBox: pk.units_per_box,
+        pricePerUnit: pk.price_per_unit, mrpPerUnit: pk.mrp_per_unit,
+        pricePerBox: pk.price_per_box, qty: item.quantity,
+      });
+    }
+    added.push(item.product_name);
+  });
+  saveCart();
+  if (added.length > 0) {
+    alert('Added to cart: ' + added.join(', ') + ' 🛒');
+    navigate('cart');
+  } else {
+    alert('Could not reorder — products may be out of stock or unavailable.');
+  }
+}
+
+// ============ PHASE 7 — CONFIRM BEFORE LEAVING FORM ============
+let _formDirty = false;
+function markFormDirty() { _formDirty = true; }
+function clearFormDirty() { _formDirty = false; }
+function guardFormLeave(callback) {
+  if (_formDirty) {
+    if (!confirm('You have unsaved changes. Leave anyway?')) return;
+    _formDirty = false;
+  }
+  callback();
+}
+
+// ============ PHASE 7 — QUICK STOCK EDIT ============
+async function quickStockEdit(pkgId, currentStock, productName, label) {
+  const newStock = prompt('Quick stock edit for:\n' + productName + ' · ' + label + '\n\nCurrent stock: ' + currentStock + '\nEnter new stock:', currentStock);
+  if (newStock === null || isNaN(newStock)) return;
+  await db.from('product_packagings').update({ stock_quantity: parseInt(newStock) }).eq('id', pkgId);
+  alert('Stock updated to ' + newStock + '! ✅');
+  showAdminTab('products');
+}
+
 function navigate(page) {
   state.page = page;
   render();
