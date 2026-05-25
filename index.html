@@ -946,7 +946,11 @@ async function showAdminTab_DISABLED(tab) {
     return;
 
   } else if (tab === 'credit') {
-    const { data: credits } = await db.from('credit_summary').select('*');
+    const { data: creditsRaw } = await db.from('credit_summary').select('*');
+    const { data: customers } = await db.from('customers').select('id, credit_days');
+    const creditDaysMap = {};
+    (customers||[]).forEach(c => { creditDaysMap[c.id] = c.credit_days || 90; });
+    const credits = (creditsRaw||[]).map(c => ({ ...c, credit_days: creditDaysMap[c.customer_id] || 90 }));
     const totalOutstanding = (credits||[]).reduce((s,c) => s + (c.balance > 0 ? c.balance : 0), 0);
     const totalCustomers = (credits||[]).length;
     const overdueCustomers = (credits||[]).filter(c => c.balance > 0).length;
@@ -3734,7 +3738,11 @@ async function showAdminTab(tab) {
     return;
 
   } else if (tab === 'credit') {
-    const { data: credits } = await db.from('credit_summary').select('*');
+    const { data: creditsRaw } = await db.from('credit_summary').select('*');
+    const { data: customers } = await db.from('customers').select('id, credit_days');
+    const creditDaysMap = {};
+    (customers||[]).forEach(c => { creditDaysMap[c.id] = c.credit_days || 90; });
+    const credits = (creditsRaw||[]).map(c => ({ ...c, credit_days: creditDaysMap[c.customer_id] || 90 }));
     const totalOutstanding = (credits||[]).reduce((s,c) => s + (c.balance > 0 ? c.balance : 0), 0);
     const totalCustomers = (credits||[]).length;
     const overdueCustomers = (credits||[]).filter(c => c.balance > 0).length;
