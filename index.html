@@ -611,7 +611,10 @@ async function showAdminTab_DISABLED(tab) {
     content.innerHTML = `
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold">Products</h2>
-        <button onclick="showAddProduct()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Product</button>
+        <div class="flex gap-2">
+          <button onclick="showBulkStockUpdate()" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold">📦 Bulk Stock</button>
+          <button onclick="showAddProduct()" class="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">+ Add Product</button>
+        </div>
       </div>
       <div class="flex gap-2 mb-4">
         <input id="product_search" type="text" placeholder="Search products..."
