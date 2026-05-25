@@ -1740,7 +1740,9 @@ function quickAddToCart(productId) {
     badge.textContent = cartCount;
   } else {
     const cartBtn = document.querySelector('[onclick="navigate(\'cart\')"]');
-    if (cartBtn) cartBtn.innerHTML = `🛒<span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold cart-badge">${cartCount}</span>`;
+    if (cartBtn) {
+      cartBtn.innerHTML = `<span class="text-xl">🛒</span><span class="absolute -top-1 right-2 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold cart-badge">${cartCount}</span><span class="text-xs font-medium">Cart</span>`;
+    }
   }
   const btn = event.target;
   btn.textContent = '✅ Added!';
