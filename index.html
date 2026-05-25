@@ -126,7 +126,6 @@ function render() {
 }
 
 function renderNav() {
-  const cartCount = state.cart.reduce((s, i) => s + i.qty, 0);
   return `
   <div class="sticky top-0 z-50 shadow">
     <nav class="bg-green-700 text-white px-4 py-2 flex items-center justify-between">
@@ -136,8 +135,8 @@ function renderNav() {
       </div>
       <div class="text-xs text-green-200">P.V.R Agrochemicals</div>
     </nav>
-    ${renderBottomNav()}
-  </div>`;
+  </div>
+  ${renderBottomNav()}`;
 }
 
 function renderBottomNav() {
