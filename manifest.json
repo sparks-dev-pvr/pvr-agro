@@ -2,6 +2,7 @@
   "name": "PVR Agro",
   "short_name": "PVR Agro",
   "description": "P.V.R Agrochemicals - Wholesale Agricultural Supplies",
+  "id": "https://pvr-agro-2.vercel.app/",
   "start_url": "https://pvr-agro-2.vercel.app/",
   "scope": "https://pvr-agro-2.vercel.app/",
   "display": "standalone",
@@ -24,7 +25,21 @@
       "src": "https://pvr-agro-2.vercel.app/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://pvr-agro-2.vercel.app/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://pvr-agro-2.vercel.app/icons/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ]
 }
