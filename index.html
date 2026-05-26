@@ -54,21 +54,7 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 const LOGO_URL = 'https://ipdjajuhfqmuuzjejlwn.supabase.co/storage/v1/object/public/product-images/pvr-logo.jpg';
 
 // PWA Manifest
-const manifest = {
-  name: 'PVR Agro',
-  short_name: 'PVR Agro',
-  description: 'P.V.R Agrochemicals - Wholesale Agricultural Supplies',
-  start_url: '/',
-  display: 'standalone',
-  background_color: '#ffffff',
-  theme_color: '#15803d',
-  orientation: 'portrait',
-  icons: [
-    { src: LOGO_URL, sizes: '192x192', type: 'image/jpeg' },
-    { src: LOGO_URL, sizes: '512x512', type: 'image/jpeg' }
-  ]
-};
-document.getElementById('manifest-placeholder').setAttribute('href', '/manifest.json');
+// Manifest served as static /manifest.json
 
 // PWA Install
 let deferredPrompt = null;
