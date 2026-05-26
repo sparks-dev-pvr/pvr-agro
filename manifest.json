@@ -9,7 +9,10 @@
   "theme_color": "#15803d",
   "orientation": "portrait-primary",
   "lang": "en",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "https://pvr-agro-2.vercel.app/icons/web-app-manifest-192x192.png",
