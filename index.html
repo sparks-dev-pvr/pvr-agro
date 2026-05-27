@@ -541,6 +541,7 @@ function renderAdmin() {
 function toggleAdminMenu() {
   const menu = document.getElementById('admin_mobile_menu');
   if (menu) menu.classList.toggle('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function addDashboardBackBtn() {
