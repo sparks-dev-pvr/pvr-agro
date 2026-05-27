@@ -1442,6 +1442,7 @@ function adminLogout() { state.adminLoggedIn = false; navigate('home'); }
 async function showAddProduct() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const form = document.getElementById('add_product_form');
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const { data: suppliers } = await db.from('suppliers').select('name').order('name');
   const supplierOptions = (suppliers || []).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
   form.innerHTML = `<div class="bg-white rounded-xl shadow p-4 mb-4">
