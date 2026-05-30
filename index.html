@@ -2449,7 +2449,7 @@ async function saveExpense() {
   const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
   const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
   await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'out', amount, running_balance: currentBal - amount, reference_type: 'expense', note: document.getElementById('exp_category').value });
-  alert('Expense saved! ✅');
+  showToast('Expense saved!', 'success');
   showAdminTab('expenses');
 }
 
