@@ -341,7 +341,7 @@ function addToCartPkg(productId, variantId, pkgId) {
     });
   }
   saveCart();
-  alert(product.name + ' (' + variant.bag_size + ' · ' + pkg.box_label + ') x' + qty + ' added to cart! 🛒');
+  showToast(product.name + ' x' + qty + ' added to cart! 🛒', 'success');
   render();
 }
 
@@ -1301,7 +1301,7 @@ async function addManualEntry(customerId, customerName) {
   if (!amount || isNaN(amount)) return;
   const note = prompt('Note for this entry:') || 'Manual debit entry';
   await db.from('credit_ledger').insert({ customer_id: customerId, amount: parseFloat(amount), type: 'debit', note });
-  alert('Manual debit of ₹' + amount + ' added! ✅');
+  showToast('Manual debit of ₹' + amount + ' added!', 'success');
   await refreshCreditSummaryCard(customerId);
   const panel = document.getElementById('credit_detail_' + customerId);
   if (panel && !panel.classList.contains('hidden')) await refreshCreditDetail(customerId);
@@ -1313,7 +1313,7 @@ async function editLedgerEntry(entryId, customerId, currentAmount, currentNote) 
   const note = prompt('Edit note:\nCurrent: ' + currentNote, currentNote);
   if (note === null) return;
   await db.from('credit_ledger').update({ amount: parseFloat(amount), note }).eq('id', entryId);
-  alert('Entry updated! ✅');
+  showToast('Entry updated!', 'success');
   await refreshCreditSummaryCard(customerId);
   await refreshCreditDetail(customerId);
 }
@@ -1767,7 +1767,7 @@ async function deleteOrder(orderId) {
   await db.from('order_items').delete().eq('order_id', orderId);
   await db.from('orders').delete().eq('id', orderId);
   window._allOrders = (window._allOrders||[]).filter(o => o.id !== orderId);
-  alert('Order deleted! 🗑');
+  showToast('Order deleted!', 'success');
   renderOrdersTab('pending');
 }
 function filterAdminProducts() {
@@ -2007,7 +2007,7 @@ async function aiSaveItems(orderId, customerId) {
       customer_id: customerId, order_id: orderId,
       amount: addedTotal, type: 'debit', note: 'Items added to existing order',
     });
-    alert('Items added! ✅ Order total updated to ₹' + newTotal);
+    showToast('Items added! Order total: ₹' + newTotal, 'success');
     showAdminTab('orders');
   } catch (err) { alert('Error: ' + err.message); console.error(err); }
 }
@@ -2343,7 +2343,7 @@ async function saveAddItemToPurchase(purchaseId) {
   const newTotal = newSubTotal + (currentPurchase?.transport_charges || 0);
   const newBalance = newTotal - (currentPurchase?.paid_amount || 0);
   await db.from('purchases').update({ sub_total: newSubTotal, total_amount: newTotal, balance: newBalance }).eq('id', purchaseId);
-  alert('Item added! ✅');
+  showToast('Item added!', 'success');
   showAdminTab('purchases');
 }
 
@@ -2500,7 +2500,7 @@ async function saveEditExpense(expenseId) {
     const newBal = newLatest && newLatest.length > 0 ? newLatest[0].running_balance : 0;
     await db.from('cash_bank_ledger').insert({ account_type: newVia, entry_type: 'out', amount: newAmount, running_balance: newBal - newAmount, reference_type: 'expense_edit', note: 'Updated expense: ' + document.getElementById('ee_category').value });
   }
-  alert('Expense updated! Cash/Bank adjusted! ✅');
+  showToast('Expense updated! Cash/Bank adjusted!', 'success');
   showAdminTab('expenses');
 }
 
@@ -2513,7 +2513,7 @@ async function deleteExpense(expenseId) {
     await db.from('cash_bank_ledger').insert({ account_type: expense.paid_via, entry_type: 'in', amount: expense.amount, running_balance: currentBal + expense.amount, reference_type: 'expense_deleted', note: 'Deleted expense: ' + expense.category });
   }
   await db.from('expenses').delete().eq('id', expenseId);
-  alert('Expense deleted! Cash/Bank adjusted! ✅');
+  showToast('Expense deleted! Cash/Bank adjusted!', 'success');
   showAdminTab('expenses');
 }
 
@@ -2561,7 +2561,7 @@ async function setOpeningBalance(accountType) {
   const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', accountType).order('created_at', { ascending: false }).limit(1);
   const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
   await db.from('cash_bank_ledger').insert({ account_type: accountType, entry_type: 'in', amount, running_balance: currentBal + amount, reference_type: 'opening_balance', note: 'Opening Balance' });
-  alert('Opening balance of ₹' + amount + ' set for ' + accountType + '! ✅');
+  showToast('Opening balance of ₹' + amount + ' set for ' + accountType + '!', 'success');
   showAdminTab('cashbank');
 }
 
@@ -2575,7 +2575,7 @@ async function saveCashBankEntry() {
   const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
   const newBal = type === 'in' ? currentBal + amount : currentBal - amount;
   await db.from('cash_bank_ledger').insert({ account_type: account, entry_type: type, amount, running_balance: newBal, reference_type: 'manual', note });
-  alert('Entry saved! ✅');
+  showToast('Entry saved!', 'success');
   showAdminTab('cashbank');
 }
 
@@ -2590,7 +2590,7 @@ async function saveTransfer() {
   const toBal = toLatest && toLatest.length > 0 ? toLatest[0].running_balance : 0;
   await db.from('cash_bank_ledger').insert({ account_type: from, entry_type: 'out', amount, running_balance: fromBal - amount, reference_type: 'transfer', note: 'Transfer to ' + to });
   await db.from('cash_bank_ledger').insert({ account_type: to, entry_type: 'in', amount, running_balance: toBal + amount, reference_type: 'transfer', note: 'Transfer from ' + from });
-  alert('Transfer done! ✅');
+  showToast('Transfer done!', 'success');
   showAdminTab('cashbank');
 }
 
@@ -2874,7 +2874,7 @@ async function recordSupplierPayment(supplierId, supplierName, balance) {
   const { data: latest } = await db.from('cash_bank_ledger').select('running_balance').eq('account_type', paidVia).order('created_at', { ascending: false }).limit(1);
   const currentBal = latest && latest.length > 0 ? latest[0].running_balance : 0;
   await db.from('cash_bank_ledger').insert({ account_type: paidVia, entry_type: 'out', amount: parseFloat(amount), running_balance: currentBal - parseFloat(amount), reference_type: 'supplier_payment', note: 'Payment to ' + supplierName });
-  alert('Payment of ₹' + amount + ' recorded and deducted from ' + paidVia + '! ✅');
+  showToast('Payment of ₹' + amount + ' recorded!', 'success');
   showAdminTab('suppliers');
 }
 
@@ -4474,7 +4474,7 @@ async function saveFixedAsset() {
   if (!name || !value) { alert('Name and value are required!'); return; }
   const { error } = await db.from('fixed_assets').insert({ name, value });
   if (error) { alert('Error: ' + error.message); return; }
-  alert('Fixed asset saved! ✅');
+  showToast('Fixed asset saved!', 'success');
   loadBalanceSheet();
 }
 
@@ -4484,14 +4484,14 @@ async function editFixedAsset(id, name, value) {
   const newValue = prompt('Edit value:', value);
   if (!newValue || isNaN(newValue)) return;
   await db.from('fixed_assets').update({ name: newName, value: parseFloat(newValue) }).eq('id', id);
-  alert('Updated! ✅');
+  showToast('Updated!', 'success');
   loadBalanceSheet();
 }
 
-async function deleteFixedAsset(id) {
+async function deleteFixedAsset
   if (!confirm('Delete this fixed asset?')) return;
   await db.from('fixed_assets').delete().eq('id', id);
-  alert('Deleted! ✅');
+  showToast('Deleted!', 'success');
   loadBalanceSheet();
 }
 
@@ -4501,7 +4501,7 @@ async function saveLoan() {
   if (!name || !amount) { alert('Name and amount are required!'); return; }
   const { error } = await db.from('loans').insert({ name, amount });
   if (error) { alert('Error: ' + error.message); return; }
-  alert('Loan saved! ✅');
+  showToast('Loan saved!', 'success');
   loadBalanceSheet();
 }
 
@@ -4511,14 +4511,14 @@ async function editLoan(id, name, amount) {
   const newAmount = prompt('Edit amount:', amount);
   if (!newAmount || isNaN(newAmount)) return;
   await db.from('loans').update({ name: newName, amount: parseFloat(newAmount) }).eq('id', id);
-  alert('Updated! ✅');
+  showToast('Updated!', 'success');
   loadBalanceSheet();
 }
 
 async function deleteLoan(id) {
   if (!confirm('Delete this loan?')) return;
   await db.from('loans').delete().eq('id', id);
-  alert('Deleted! ✅');
+  showToast('Deleted!', 'success');
   loadBalanceSheet();
 }
 
@@ -4901,7 +4901,7 @@ async function saveBulkStock() {
       }
     }
   }
-  alert('✅ ' + updated + ' packaging(s) updated!');
+  showToast(updated + ' packaging(s) updated!', 'success');
   showAdminTab('products');
 }
 
@@ -5085,7 +5085,7 @@ async function saveReturn() {
     });
   }
 
-  alert('Return recorded! ✅ Stock restored & credit ledger updated.');
+  showToast('Return recorded! Stock restored!', 'success');
   showReturnsTab();
 }
 
@@ -5109,7 +5109,7 @@ async function deleteReturn(returnId, customerId, amount, productName, variantNa
   }
 
   await db.from('sales_returns').delete().eq('id', returnId);
-  alert('Return deleted! ✅');
+  showToast('Return deleted!', 'success');
   showReturnsTab();
 }
 
@@ -5118,7 +5118,7 @@ async function editCustomerCreditDays(customerId, customerName, currentDays) {
   const days = prompt('Credit days for ' + customerName + ':\n(Payment due after this many days from order date)', currentDays || 90);
   if (!days || isNaN(days)) return;
   await db.from('customers').update({ credit_days: parseInt(days) }).eq('id', customerId);
-  alert('Credit days updated! ✅');
+  showToast('Credit days updated!', 'success');
   showAdminTab('credit');
 }
 
@@ -5253,7 +5253,7 @@ async function quickStockEdit(pkgId, currentStock, productName, label) {
   const newStock = prompt('Quick stock edit for:\n' + productName + ' · ' + label + '\n\nCurrent stock: ' + currentStock + '\nEnter new stock:', currentStock);
   if (newStock === null || isNaN(newStock)) return;
   await db.from('product_packagings').update({ stock_quantity: parseInt(newStock) }).eq('id', pkgId);
-  alert('Stock updated to ' + newStock + '! ✅');
+  showToast('Stock updated to ' + newStock + '!', 'success');
   showAdminTab('products');
 }
 
