@@ -2239,7 +2239,7 @@ async function deletePurchase(purchaseId) {
   await db.from('purchase_items').delete().eq('purchase_id', purchaseId);
   await db.from('supplier_ledger').delete().eq('purchase_id', purchaseId);
   await db.from('purchases').delete().eq('id', purchaseId);
-  alert('Purchase deleted! Stock reversed. ✅');
+  showToast('Purchase deleted! Stock reversed!', 'success');
   showAdminTab('purchases');
 }
 
