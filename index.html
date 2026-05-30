@@ -104,6 +104,11 @@ function hideSplash() {
 
 function render() {
   const app = document.getElementById('app');
+  app.style.opacity = '0';
+  app.style.transition = 'opacity 0.18s ease';
+  setTimeout(() => {
+    app.style.opacity = '1';
+  }, 30);
   if (state.page === 'admin' && !state.adminLoggedIn) { app.innerHTML = renderAdminLogin(); }
   else if (state.page === 'admin') { app.innerHTML = renderAdmin(); loadAdminData(); }
   else if (state.page === 'cart') { app.innerHTML = renderCart(); }
