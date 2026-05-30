@@ -2220,7 +2220,7 @@ async function saveNewPurchase() {
   if (paidAmount > 0) {
     await db.from('supplier_ledger').insert({ supplier_id: supplierId, purchase_id: purchase.id, amount: paidAmount, type: 'credit', note: 'Payment at time of purchase' });
   }
-  alert('Purchase saved! ✅');
+  showToast('Purchase saved!', 'success');
   showAdminTab('purchases');
 }
 
