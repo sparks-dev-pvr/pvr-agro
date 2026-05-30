@@ -1669,7 +1669,7 @@ async function saveEditProduct(productId) {
 async function toggleProductAvailability(productId, currentStatus) {
   const newStatus = !currentStatus;
   await db.from('products').update({ is_available: newStatus }).eq('id', productId);
-  alert(newStatus ? 'Product marked as Available ✅' : 'Product marked as Unavailable 🚫');
+  showToast(newStatus ? 'Product marked as Available' : 'Product marked as Unavailable', 'info');
   showAdminTab('products');
 }
   async function deleteProduct(productId) {
