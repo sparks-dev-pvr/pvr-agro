@@ -4493,7 +4493,7 @@ async function editFixedAsset(id, name, value) {
   loadBalanceSheet();
 }
 
-async function deleteFixedAsset
+async function deleteFixedAsset(id) {
   if (!confirm('Delete this fixed asset?')) return;
   await db.from('fixed_assets').delete().eq('id', id);
   showToast('Deleted!', 'success');
