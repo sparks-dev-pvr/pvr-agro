@@ -1678,7 +1678,7 @@ async function toggleProductAvailability(productId, currentStatus) {
   if (variants) for (const v of variants) await db.from('product_packagings').delete().eq('variant_id', v.id);
   await db.from('product_variants').delete().eq('product_id', productId);
   await db.from('products').delete().eq('id', productId);
-  alert('Product deleted!');
+  showToast('Product deleted!', 'success');
   showAdminTab('products');
 }
 
