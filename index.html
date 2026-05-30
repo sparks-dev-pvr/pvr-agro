@@ -2790,7 +2790,7 @@ async function saveEditSupplier(supplierId) {
     address: document.getElementById('es_address').value.trim(),
   }).eq('id', supplierId);
   if (error) { alert('Error: ' + error.message); return; }
-  alert('Supplier updated! ✅');
+  showToast('Supplier updated!', 'success');
   showAdminTab('suppliers');
 }
 
