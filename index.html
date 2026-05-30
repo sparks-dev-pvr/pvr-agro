@@ -5262,6 +5262,33 @@ function navigate(page) {
   render();
 }
 function attachEvents() {}
+
+function showToast(msg, type = 'success', duration = 3000) {
+  const existing = document.getElementById('pvr_toast');
+  if (existing) existing.remove();
+  const colors = {
+    success: 'bg-green-700',
+    error: 'bg-red-600',
+    info: 'bg-blue-600',
+    warning: 'bg-orange-500',
+  };
+  const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+  const toast = document.createElement('div');
+  toast.id = 'pvr_toast';
+  toast.className = `fixed top-5 left-1/2 z-[9999] px-4 py-3 rounded-2xl shadow-xl text-white text-sm font-medium flex items-center gap-2 max-w-xs w-max transition-all duration-300 ${colors[type] || colors.success}`;
+  toast.style.cssText = 'transform: translateX(-50%) translateY(-20px); opacity: 0;';
+  toast.innerHTML = `<span>${icons[type] || '✅'}</span><span>${msg}</span>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    toast.style.opacity = '1';
+  });
+  setTimeout(() => {
+    toast.style.transform = 'translateX(-50%) translateY(-20px)';
+    toast.style.opacity = '0';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
 if (window.location.hash === '#admin') state.page = 'admin';
 render();
 hideSplash();
