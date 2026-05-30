@@ -2798,7 +2798,7 @@ async function deleteSupplier(supplierId) {
   if (!confirm('Delete this supplier? This cannot be undone.')) return;
   await db.from('supplier_ledger').delete().eq('supplier_id', supplierId);
   await db.from('suppliers').delete().eq('id', supplierId);
-  alert('Supplier deleted!');
+  showToast('Supplier deleted!', 'success');
   showAdminTab('suppliers');
 }
 
