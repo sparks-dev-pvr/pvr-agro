@@ -4729,25 +4729,25 @@ async function loadDashboard() {
 
       <!-- Today Stats -->
       <div class="grid grid-cols-2 gap-3">
-        <div class="bg-green-700 text-white rounded-xl p-4 shadow">
+        <div class="bg-green-700 text-white rounded-xl p-4 shadow cursor-pointer active:scale-95 transition-transform" onclick="showAdminTab('orders')">
           <div class="text-xs text-green-200">Today's Sales</div>
           <div class="font-bold text-xl">${fmt(todaySales)}</div>
-          <div class="text-xs text-green-200">${(todayOrders||[]).length} order(s)</div>
+          <div class="text-xs text-green-200">${(todayOrders||[]).length} order(s) →</div>
         </div>
-        <div class="bg-orange-500 text-white rounded-xl p-4 shadow">
+        <div class="bg-orange-500 text-white rounded-xl p-4 shadow cursor-pointer active:scale-95 transition-transform" onclick="showAdminTab('orders')">
           <div class="text-xs text-orange-100">Pending Orders</div>
           <div class="font-bold text-xl">${pendingOrders}</div>
-          <div class="text-xs text-orange-100">need attention</div>
+          <div class="text-xs text-orange-100">tap to view →</div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow border">
+        <div class="bg-white rounded-xl p-4 shadow border cursor-pointer active:scale-95 transition-transform" onclick="showAdminTab('cashbank')">
           <div class="text-xs text-gray-400">💵 Cash</div>
           <div class="font-bold text-orange-600">${fmt(cashBal)}</div>
-          <div class="text-xs text-gray-400">🏦 Bank: ${fmt(bankBal)}</div>
+          <div class="text-xs text-gray-400">🏦 Bank: ${fmt(bankBal)} →</div>
         </div>
-        <div class="bg-white rounded-xl p-4 shadow border">
+        <div class="bg-white rounded-xl p-4 shadow border cursor-pointer active:scale-95 transition-transform" onclick="showAdminTab('credit')">
           <div class="text-xs text-gray-400">Outstanding</div>
           <div class="font-bold text-red-500">${fmt(totalOutstanding)}</div>
-          <div class="text-xs text-gray-400">${(credits||[]).filter(c=>c.balance>0).length} customers</div>
+          <div class="text-xs text-gray-400">${(credits||[]).filter(c=>c.balance>0).length} customers →</div>
         </div>
       </div>
 
