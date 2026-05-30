@@ -2757,7 +2757,7 @@ async function saveNewSupplier() {
     address: document.getElementById('ns_address').value.trim(),
   });
   if (error) { alert('Error: ' + error.message); return; }
-  alert('Supplier added! ✅');
+  showToast('Supplier added!', 'success');
   showAdminTab('suppliers');
 }
 
