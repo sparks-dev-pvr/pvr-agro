@@ -1361,7 +1361,16 @@ async function placeOrder() {
   const address = document.getElementById('co_address').value.trim();
   const transport = document.getElementById('co_transport').value.trim();
   const payment = document.querySelector('input[name="payment"]:checked')?.value || 'cash';
-  if (!name || !phone || !address) { alert('Please fill in Name, Phone and Shipping Address!'); return; }
+  let hasError = false;
+  ['co_name','co_phone','co_address'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) {
+      el.classList.add('border-red-500','bg-red-50');
+      el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+      hasError = true;
+    }
+  });
+  if (hasError) { showToast('Please fill in Name, Phone and Address!', 'error'); return; }
   try {
     const { data: customer } = await db.from('customers')
       .upsert({ name, phone, address, gst_number: gst, transport_name: transport }, { onConflict: 'phone' })
