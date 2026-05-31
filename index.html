@@ -1766,6 +1766,12 @@ function quickAddToCart(productId) {
   btn.textContent = '✅ Added!';
   btn.classList.replace('bg-green-700', 'bg-green-500');
   setTimeout(() => { btn.textContent = '+ Add to Cart'; btn.classList.replace('bg-green-500', 'bg-green-700'); }, 1000);
+  const badge = document.querySelector('.cart-badge');
+  if (badge) {
+    badge.style.transform = 'scale(1.6)';
+    badge.style.transition = 'transform 0.15s ease';
+    setTimeout(() => { badge.style.transform = 'scale(1)'; }, 200);
+  }
 }
 async function deleteOrder(orderId) {
   if (!confirm('Delete this order? This cannot be undone.')) return;
