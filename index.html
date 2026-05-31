@@ -5295,10 +5295,31 @@ async function quickStockEdit(pkgId, currentStock, productName, label) {
 function navigate(page) {
   const sticky = document.getElementById('sticky_add_to_cart');
   if (sticky) sticky.remove();
-  history.pushState({ page: state.page }, '', '');
+  history.pushState({ page: page, productId: state.selectedProduct }, '', window.location.href);
   state.page = page;
   render();
 }
+
+window.addEventListener('popstate', (e) => {
+  const sticky = document.getElementById('sticky_add_to_cart');
+  if (sticky) sticky.remove();
+  if (e.state && e.state.page === 'product' && e.state.productId) {
+    state.page = 'product';
+    state.selectedProduct = e.state.productId;
+    render();
+  } else if (e.state && e.state.page === 'admin') {
+    state.page = 'admin';
+    state.adminLoggedIn = true;
+    loadDashboard();
+  } else if (e.state && e.state.page) {
+    state.page = e.state.page;
+    render();
+  } else {
+    history.pushState({ page: 'home' }, '', window.location.href);
+    state.page = 'home';
+    render();
+  }
+});
 
 window.addEventListener('popstate', (e) => {
   const sticky = document.getElementById('sticky_add_to_cart');
