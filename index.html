@@ -3408,6 +3408,7 @@ async function loadSalesReport() {
 async function showAdminTab(tab) {
   const content = document.getElementById('admin_content');
   if (!content) return;
+  history.pushState({ page: 'admin', tab: tab }, '', '');
   if (tab === 'reports') { window._reportsSubTab = 'monthly'; showReportsTab('monthly'); return; }
   if (tab === 'dashboard') { loadDashboard(); return; }
   if (tab === 'returns') { showReturnsTab(); return; }
