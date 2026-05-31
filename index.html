@@ -654,7 +654,7 @@ async function showAdminTab_DISABLED(tab) {
               <button onclick="toggleProductAvailability('${p.id}', ${p.is_available})" class="text-xs py-1.5 rounded-lg font-medium ${p.is_available ? 'bg-orange-50 text-orange-500' : 'bg-green-50 text-green-600'}">${p.is_available ? '🚫 Unavail' : '✅ Avail'}</button>
               <button onclick="deleteProduct('${p.id}')" class="bg-red-50 text-red-500 text-xs py-1.5 rounded-lg font-medium">🗑 Delete</button>
             </div>
-            <div class="mt-2 space-y-1">
+            <div id="prod_detail_dis_${p.id}" class="hidden mt-2 space-y-1 border-t pt-2">
               ${(p.product_variants || []).map(v => `
                 <div class="text-xs text-gray-600 ml-2">
                   <span class="font-medium">${v.bag_size}</span>
@@ -664,6 +664,8 @@ async function showAdminTab_DISABLED(tab) {
                   `).join('')}
                 </div>`).join('')}
             </div>
+            <button onclick="const el=document.getElementById('prod_detail_dis_${p.id}'); el.classList.toggle('hidden'); this.textContent=el.classList.contains('hidden')?'▾ Show variants':'▴ Hide variants';"
+              class="text-xs text-gray-400 mt-2">▾ Show variants</button>
           </div>`; }).join('')}
       </div>`;
 
