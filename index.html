@@ -2804,7 +2804,12 @@ function showAddSupplier() {
 
 async function saveNewSupplier() {
   const name = document.getElementById('ns_name').value.trim();
-  if (!name) { alert('Company name is required!'); return; }
+  if (!name) {
+    const el = document.getElementById('ns_name');
+    el.classList.add('border-red-500','bg-red-50');
+    el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+    showToast('Company name is required!', 'error'); return;
+  }
   const { error } = await db.from('suppliers').insert({
     name,
     phone: document.getElementById('ns_phone').value.trim(),
