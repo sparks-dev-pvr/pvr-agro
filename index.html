@@ -5303,12 +5303,17 @@ function navigate(page) {
 window.addEventListener('popstate', (e) => {
   const sticky = document.getElementById('sticky_add_to_cart');
   if (sticky) sticky.remove();
-  if (e.state && e.state.page) {
+  if (e.state && e.state.page === 'admin' && e.state.tab) {
+    state.page = 'admin';
+    state.adminLoggedIn = true;
+    showAdminTab(e.state.tab);
+  } else if (e.state && e.state.page) {
     state.page = e.state.page;
+    render();
   } else {
     state.page = 'home';
+    render();
   }
-  render();
 });
 function attachEvents() {}
 
