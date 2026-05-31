@@ -329,12 +329,18 @@ function updatePackagingDetails(productId, variantId) {
         <span class="text-sm text-gray-500">boxes</span>
       </div>
     </div>
+    <div style="height:100px;"></div>`;
+  // Sticky add to cart
+  const stickyBar = document.createElement('div');
+  stickyBar.className = 'fixed bottom-16 left-0 right-0 px-4 z-40';
+  stickyBar.id = 'sticky_add_to_cart';
+  stickyBar.innerHTML = `
     <button onclick="addToCartPkg('${productId}','${variantId}','${pkgId}')"
       ${pkg.stock_quantity === 0 ? 'disabled' : ''}
-      class="w-full ${pkg.stock_quantity === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'} text-white py-3 rounded-xl font-bold text-lg">
-      ${pkg.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart 🛒'}
-    </button>
-    <div style="height:100px;"></div>`;
+      class="w-full ${pkg.stock_quantity === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'} text-white py-4 rounded-2xl font-bold text-lg shadow-xl">
+      ${pkg.stock_quantity === 0 ? '❌ Out of Stock' : '🛒 Add to Cart — ₹' + pkg.price_per_box}
+    </button>`;
+  document.body.appendChild(stickyBar);
 }
 
 function addToCartPkg(productId, variantId, pkgId) {
