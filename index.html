@@ -5292,6 +5292,8 @@ async function quickStockEdit(pkgId, currentStock, productName, label) {
 }
 
 function navigate(page) {
+  const sticky = document.getElementById('sticky_add_to_cart');
+  if (sticky) sticky.remove();
   state.page = page;
   render();
 }
