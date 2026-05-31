@@ -5344,7 +5344,8 @@ function showToast(msg, type = 'success', duration = 3000) {
   }, duration);
 }
 if (window.location.hash === '#admin') state.page = 'admin';
-history.replaceState({ page: 'home' }, '', '');
+history.replaceState({ page: 'home' }, '', window.location.href);
+history.pushState({ page: 'home' }, '', window.location.href);
 render();
 hideSplash();
 </script>
