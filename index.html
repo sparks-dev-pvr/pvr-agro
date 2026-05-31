@@ -1554,9 +1554,19 @@ async function saveNewProduct() {
   const category = document.getElementById('np_category').value;
   const desc = document.getElementById('np_desc').value.trim();
   const hsn = document.getElementById('np_hsn').value.trim();
-  if (!name) { alert('Product name is required!'); return; }
+  if (!name) {
+    const el = document.getElementById('np_name');
+    el.classList.add('border-red-500','bg-red-50');
+    el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+    showToast('Product name is required!', 'error'); return;
+  }
   const chemical = document.getElementById('np_chemical').value.trim();
-  if (!chemical) { alert('Chemical name is required!'); return; }
+  if (!chemical) {
+    const el = document.getElementById('np_chemical');
+    el.classList.add('border-red-500','bg-red-50');
+    el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+    showToast('Chemical name is required!', 'error'); return;
+  }
   let image_url = null;
   const imageFile = document.getElementById('np_image').files[0];
   if (imageFile) {
