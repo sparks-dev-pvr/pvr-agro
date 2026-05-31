@@ -2491,7 +2491,12 @@ function showAddExpense() {
 
 async function saveExpense() {
   const amount = parseFloat(document.getElementById('exp_amount').value);
-  if (!amount) { alert('Amount is required!'); return; }
+  if (!amount) {
+    const el = document.getElementById('exp_amount');
+    el.classList.add('border-red-500','bg-red-50');
+    el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+    showToast('Amount is required!', 'error'); return;
+  }
   const paidVia = document.getElementById('exp_via').value;
   const { error } = await db.from('expenses').insert({
     category: document.getElementById('exp_category').value,
