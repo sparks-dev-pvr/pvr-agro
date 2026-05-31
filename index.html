@@ -1917,8 +1917,17 @@ async function saveManualOrder() {
   const transport = document.getElementById('mo_transport').value.trim();
   const payment = document.getElementById('mo_payment').value;
   const items = window._moItems || [];
-  if (!name || !phone || !address) { alert('Name, Phone and Address are required!'); return; }
-  if (items.length === 0) { alert('Add at least one item!'); return; }
+  let moError = false;
+  ['mo_name','mo_phone','mo_address'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value.trim()) {
+      el.classList.add('border-red-500','bg-red-50');
+      el.addEventListener('input', () => el.classList.remove('border-red-500','bg-red-50'), { once: true });
+      moError = true;
+    }
+  });
+  if (moError) { showToast('Name, Phone and Address are required!', 'error'); return; }
+  if (items.length === 0) { showToast('Add at least one item!', 'error'); return; }
   const total = items.reduce((s, i) => s + i.pricePerBox * i.qty, 0);
   try {
     const { data: customer } = await db.from('customers')
