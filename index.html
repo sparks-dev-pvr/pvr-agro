@@ -1724,6 +1724,7 @@ function renderProductGrid() {
     return '<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-3 hover:shadow-md transition">'
       + '<div class="w-full h-40 rounded-lg mb-2 overflow-hidden cursor-pointer" onclick="state.selectedProduct=\'' + p.id + '\'; state.page=\'product\'; render();">' + img + '</div>'
       + '<div class="font-semibold text-gray-800 text-sm cursor-pointer" onclick="state.selectedProduct=\'' + p.id + '\'; state.page=\'product\'; render();">' + p.name + '</div>'
+      + '<div class="text-xs text-gray-300 mb-1">👆 Tap image to view details</div>'
       + '<div class="text-xs text-gray-500 mb-1">' + (p.company_name ? p.company_name + ' · ' : '') + p.category + '</div>'
       + chem + price
       + (canAdd ? '<button onclick="quickAddToCart(\'' + p.id + '\')" class="mt-2 w-full bg-green-700 text-white text-xs py-1.5 rounded-lg font-bold hover:bg-green-800">+ Add to Cart</button>' : '<div class="mt-2 w-full text-center text-xs text-red-400 font-medium py-1.5 bg-red-50 rounded-lg">Out of Stock</div>')
