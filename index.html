@@ -5413,9 +5413,12 @@ function showToast(msg, type = 'success', duration = 3000) {
     setTimeout(() => toast.remove(), 300);
   }, duration);
 }
-if (window.location.hash === '#admin') state.page = 'admin';
-history.replaceState({ page: 'home' }, '', window.location.href);
-history.pushState({ page: 'home' }, '', window.location.href);
+if (window.location.hash === '#admin' || localStorage.getItem('pvr_admin_logged_in') === '1') {
+  state.page = 'admin';
+  state.adminLoggedIn = localStorage.getItem('pvr_admin_logged_in') === '1';
+}
+history.replaceState({ page: state.page }, '', window.location.href);
+history.pushState({ page: state.page }, '', window.location.href);
 render();
 hideSplash();
 </script>
