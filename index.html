@@ -1466,10 +1466,17 @@ async function autofillCustomer(phone) {
 
 function adminLogin() {
   const pass = document.getElementById('admin_pass').value;
-  if (pass === 'PVRagro2025') { state.adminLoggedIn = true; render(); }
-  else document.getElementById('login_error').textContent = 'Incorrect password!';
+  if (pass === 'PVRagro2025') {
+    state.adminLoggedIn = true;
+    localStorage.setItem('pvr_admin_logged_in', '1');
+    render();
+  } else document.getElementById('login_error').textContent = 'Incorrect password!';
 }
-function adminLogout() { state.adminLoggedIn = false; navigate('home'); }
+function adminLogout() {
+  state.adminLoggedIn = false;
+  localStorage.removeItem('pvr_admin_logged_in');
+  navigate('home');
+}
 
 async function showAddProduct() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
