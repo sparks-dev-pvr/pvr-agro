@@ -1214,6 +1214,57 @@ function renderOrdersTab(activeStatus) {
     <div class="space-y-3">${ordersHTML}</div>`;
 }
 
+function filterOrdersOnly(activeStatus) {
+  const searchVal = (document.getElementById('order_search')?.value || '').toLowerCase();
+  const items = window._allItems || [];
+  let orders = window._allOrders || [];
+  if (searchVal) {
+    orders = orders.filter(o => {
+      const nameMatch = (o.customers?.name || '').toLowerCase().includes(searchVal);
+      const phoneMatch = (o.customers?.phone || '').toLowerCase().includes(searchVal);
+      const productMatch = items.filter(i => i.order_id === o.id).some(i => (i.product_name || '').toLowerCase().includes(searchVal));
+      return nameMatch || phoneMatch || productMatch;
+    });
+  }
+  const activeOrders = orders.filter(o => o.order_status === activeStatus);
+  const container = document.querySelector('.space-y-3:last-of-type');
+  if (!container) return;
+  if (activeOrders.length === 0) {
+    container.innerHTML = '<div class="text-gray-400 text-center py-6">No orders found</div>';
+    return;
+  }
+  const statusColors = { pending:'bg-yellow-500', confirmed:'bg-blue-500', dispatched:'bg-green-600', cancelled:'bg-red-500' };
+  const statuses = ['pending','confirmed','dispatched','cancelled'];
+  container.innerHTML = activeOrders.map(o => {
+    const orderItems = items.filter(i => i.order_id === o.id);
+    return `
+    <div class="bg-white rounded-xl shadow p-4">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <div class="font-bold">${o.customers?.name || 'Unknown'}</div>
+          <div class="text-sm text-gray-500">${o.customers?.phone || ''}</div>
+          <div class="text-xs text-gray-400">${new Date(o.created_at).toLocaleString()}</div>
+        </div>
+        <div class="text-right">
+          <div class="font-bold text-green-700">₹${o.total_amount}</div>
+          <div class="text-xs text-blue-600">${o.payment_method}</div>
+          <select onchange="updateOrderStatus('${o.id}',this.value,'${activeStatus}')" class="text-xs border rounded px-1 py-0.5 mt-1">
+            ${statuses.map(s => `<option value="${s}" ${o.order_status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+          </select>
+          <button onclick="generateInvoice('${o.id}')" class="block mt-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded w-full">🧾 Invoice</button>
+          <button onclick="shareWhatsApp('${o.customers?.phone||''}','${o.customers?.name||'Customer'}',${o.total_amount})" class="block mt-1 text-xs bg-[#25D366] text-white px-2 py-0.5 rounded w-full">📲 WhatsApp</button>
+          <button onclick="deleteOrder('${o.id}')" class="block mt-1 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded w-full">🗑 Delete</button>
+          <button onclick="showAddItemsToOrder('${o.id}')" class="block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded w-full">➕ Items</button>
+        </div>
+      </div>
+      <div class="text-sm text-gray-600 border-t pt-2">
+        ${orderItems.map(i => (i.product_name||'') + ' x' + i.quantity).join(', ')}
+      </div>
+      ${o.shipping_address ? `<div class="text-xs text-gray-400 mt-1">📍 ${o.shipping_address}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
 function toggleCustomerOrders(custId) {
   const el = document.getElementById('cust_orders_' + custId);
   if (el) el.classList.toggle('hidden');
